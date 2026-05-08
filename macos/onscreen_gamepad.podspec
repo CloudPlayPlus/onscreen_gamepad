@@ -5,13 +5,13 @@
 Pod::Spec.new do |s|
   s.name             = 'onscreen_gamepad'
   s.version          = '0.0.1'
-  s.summary          = 'A new Flutter plugin project.'
+  s.summary          = 'CloudPlayPlus onscreen gamepad overlay.'
   s.description      = <<-DESC
-A new Flutter plugin project.
+Adaptive onscreen gamepad overlay, layout engine, and input profile models for CloudPlayPlus.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://github.com/CloudPlayPlus/onscreen_gamepad'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'CloudPlayPlus' => 'cloudplayplus@users.noreply.github.com' }
 
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'

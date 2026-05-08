@@ -24,6 +24,7 @@ offset.y: 以 anchor 中心为 0，anchor 半高为 1 的纵向偏移
 sizeTier: small | medium | large
 sizeScale: 用户自由缩放倍率，默认 1.0
 color: 可选；未设置时使用 profile.defaultColor
+input: 输入语义，例如 gamepadButton(a) 或 gamepadStick(leftX, leftY)
 ```
 
 按钮中心点：
@@ -142,3 +143,5 @@ visualSize = round(hitSize * 0.82)
 - 普通按钮：pointer down 触发按键 down，pointer up/cancel 触发按键 up。
 - 摇杆按钮：pointer down 也触发 `LS/RS down`；如果用户继续拖动，则按 pointer 相对摇杆 hit rect 中心的位置输出 `(-1..1, -1..1)` 的归一化向量；pointer up/cancel 时先回零，再触发 `LS/RS up`。
 - 摇杆不额外扩大 overlay 命中层，只有自己的 hit rect 捕获触摸；hit rect 外仍然透传给视频。
+
+CloudPlayPlus 接入时建议只依赖 `control.input`，不要依赖 label。`id` 用于 profile 编辑和 active state，`label` 只用于显示。

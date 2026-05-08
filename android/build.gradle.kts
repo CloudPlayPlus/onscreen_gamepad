@@ -1,4 +1,4 @@
-group = "com.example.onscreen_gamepad"
+group = "org.cloudplayplus.onscreen_gamepad"
 version = "1.0-SNAPSHOT"
 
 buildscript {
@@ -27,7 +27,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.onscreen_gamepad"
+    namespace = "org.cloudplayplus.onscreen_gamepad"
 
     compileSdk = 36
 

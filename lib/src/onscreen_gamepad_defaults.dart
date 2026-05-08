@@ -16,6 +16,11 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.stick,
       role: OnscreenGamepadControlRole.stick,
       sizeTier: OnscreenGamepadSizeTier.large,
+      input: OnscreenGamepadInput.gamepadStick(
+        code: 'leftStick',
+        xAxis: 'leftX',
+        yAxis: 'leftY',
+      ),
       sortOrder: 10,
     ),
     OnscreenGamepadControl(
@@ -26,6 +31,11 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.stick,
       role: OnscreenGamepadControlRole.stick,
       sizeTier: OnscreenGamepadSizeTier.large,
+      input: OnscreenGamepadInput.gamepadStick(
+        code: 'rightStick',
+        xAxis: 'rightX',
+        yAxis: 'rightY',
+      ),
       sizeScale: 0.9,
       sortOrder: 20,
     ),
@@ -37,6 +47,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.dpad,
       sizeTier: OnscreenGamepadSizeTier.small,
+      input: OnscreenGamepadInput.gamepadButton('dpadUp'),
       sizeScale: 0.9,
       sortOrder: 30,
     ),
@@ -48,6 +59,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.dpad,
       sizeTier: OnscreenGamepadSizeTier.small,
+      input: OnscreenGamepadInput.gamepadButton('dpadLeft'),
       sizeScale: 0.9,
       sortOrder: 31,
     ),
@@ -59,6 +71,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.dpad,
       sizeTier: OnscreenGamepadSizeTier.small,
+      input: OnscreenGamepadInput.gamepadButton('dpadRight'),
       sizeScale: 0.9,
       sortOrder: 32,
     ),
@@ -70,6 +83,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.dpad,
       sizeTier: OnscreenGamepadSizeTier.small,
+      input: OnscreenGamepadInput.gamepadButton('dpadDown'),
       sizeScale: 0.9,
       sortOrder: 33,
     ),
@@ -81,6 +95,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.circle,
       role: OnscreenGamepadControlRole.secondary,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('x'),
       sortOrder: 40,
     ),
     OnscreenGamepadControl(
@@ -91,6 +106,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.circle,
       role: OnscreenGamepadControlRole.secondary,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('y'),
       sortOrder: 41,
     ),
     OnscreenGamepadControl(
@@ -101,6 +117,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.circle,
       role: OnscreenGamepadControlRole.primary,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('a'),
       sortOrder: 42,
     ),
     OnscreenGamepadControl(
@@ -111,6 +128,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.circle,
       role: OnscreenGamepadControlRole.secondary,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('b'),
       sortOrder: 43,
     ),
     OnscreenGamepadControl(
@@ -121,6 +139,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.bumper,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('leftShoulder'),
       sortOrder: 50,
     ),
     OnscreenGamepadControl(
@@ -131,6 +150,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.trigger,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('leftTrigger'),
       sortOrder: 51,
     ),
     OnscreenGamepadControl(
@@ -141,6 +161,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.bumper,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('rightShoulder'),
       sortOrder: 52,
     ),
     OnscreenGamepadControl(
@@ -151,6 +172,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.trigger,
       sizeTier: OnscreenGamepadSizeTier.medium,
+      input: OnscreenGamepadInput.gamepadButton('rightTrigger'),
       sortOrder: 53,
     ),
     OnscreenGamepadControl(
@@ -161,6 +183,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.utility,
       sizeTier: OnscreenGamepadSizeTier.small,
+      input: OnscreenGamepadInput.gamepadButton('view'),
       sizeScale: 0.85,
       sortOrder: 60,
     ),
@@ -172,6 +195,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.square,
       role: OnscreenGamepadControlRole.utility,
       sizeTier: OnscreenGamepadSizeTier.small,
+      input: OnscreenGamepadInput.gamepadButton('menu'),
       sizeScale: 0.85,
       sortOrder: 61,
     ),
@@ -183,6 +207,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
       kind: OnscreenGamepadControlKind.circle,
       role: OnscreenGamepadControlRole.utility,
       sizeTier: OnscreenGamepadSizeTier.small,
+      input: OnscreenGamepadInput.gamepadButton('guide'),
       sizeScale: 0.9,
       sortOrder: 62,
     ),

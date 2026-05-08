@@ -79,4 +79,28 @@ void main() {
       expect(bounds.contains(placed.hitRect.bottomRight), isTrue);
     }
   });
+
+  test('profile json keeps layout and input semantics', () {
+    final restored = OnscreenGamepadProfile.fromJson(
+      kOnscreenGamepadXboxProfile.toJson(),
+    );
+    final leftStick = restored.controls.firstWhere(
+      (control) => control.id == 'left-stick',
+    );
+    final aButton = restored.controls.firstWhere(
+      (control) => control.id == 'a',
+    );
+
+    expect(restored.id, kOnscreenGamepadXboxProfile.id);
+    expect(
+      restored.controls.length,
+      kOnscreenGamepadXboxProfile.controls.length,
+    );
+    expect(leftStick.input.kind, OnscreenGamepadInputKind.gamepadStick);
+    expect(leftStick.input.xAxis, 'leftX');
+    expect(leftStick.input.yAxis, 'leftY');
+    expect(aButton.input.kind, OnscreenGamepadInputKind.gamepadButton);
+    expect(aButton.input.code, 'a');
+    expect(aButton.anchor, OnscreenGamepadAnchor.bottomRight);
+  });
 }

@@ -1,4 +1,4 @@
-package com.example.onscreen_gamepad
+package org.cloudplayplus.onscreen_gamepad
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
