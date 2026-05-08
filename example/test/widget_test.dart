@@ -1,27 +1,36 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:onscreen_gamepad_example/main.dart';
 
 void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('renders the onscreen gamepad demo', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text && widget.data!.startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Phone'), findsOneWidget);
+    expect(find.text('Wide'), findsOneWidget);
+    expect(find.text('A'), findsOneWidget);
+    expect(find.textContaining('Ready'), findsOneWidget);
+  });
+
+  testWidgets('stick tap and drag emits stick events', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    final stick = find.text('LS');
+    final gesture = await tester.startGesture(tester.getCenter(stick));
+    await tester.pump();
+
+    expect(find.textContaining('LS down'), findsOneWidget);
+
+    await gesture.moveBy(const Offset(24, -18));
+    await tester.pump();
+
+    expect(find.textContaining('LS x='), findsOneWidget);
+
+    await gesture.up();
+    await tester.pump();
+
+    expect(find.textContaining('LS up'), findsOneWidget);
   });
 }

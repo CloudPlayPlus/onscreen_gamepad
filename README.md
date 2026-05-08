@@ -1,15 +1,25 @@
 # onscreen_gamepad
 
-A new Flutter plugin project.
+Flutter onscreen gamepad overlay prototype for CloudPlayPlus.
 
-## Getting Started
+The package currently contains:
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/to/develop-plugins),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+- a pure Dart layout engine for the five-zone screen button rules;
+- an Xbox default profile;
+- a Flutter overlay widget that only hit-tests real buttons, leaving empty
+  overlay space pass-through;
+- an example app for checking phone, foldable, tablet, and desktop layouts.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Layout rules
 
+See [docs/screen_button_layout.md](docs/screen_button_layout.md) for the current
+formula, default parameters, size tiers, and Xbox default control table.
+
+## Demo
+
+```sh
+cd example
+flutter run -d chrome
+```
+
+The demo uses the public package API from `package:onscreen_gamepad`.

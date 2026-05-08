@@ -1,0 +1,22 @@
+PODS:
+  - FlutterMacOS (1.0.0)
+  - onscreen_gamepad (0.0.1):
+    - FlutterMacOS
+
+DEPENDENCIES:
+  - FlutterMacOS (from `Flutter/ephemeral`)
+  - onscreen_gamepad (from `Flutter/ephemeral/.symlinks/plugins/onscreen_gamepad/macos`)
+
+EXTERNAL SOURCES:
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+  onscreen_gamepad:
+    :path: Flutter/ephemeral/.symlinks/plugins/onscreen_gamepad/macos
+
+SPEC CHECKSUMS:
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  onscreen_gamepad: a65c46e58add3c60a7cf2274057d514b3a058674
+
+PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+
+COCOAPODS: 1.16.2

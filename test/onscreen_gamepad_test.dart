@@ -12,7 +12,8 @@ class MockOnscreenGamepadPlatform
 }
 
 void main() {
-  final OnscreenGamepadPlatform initialPlatform = OnscreenGamepadPlatform.instance;
+  final OnscreenGamepadPlatform initialPlatform =
+      OnscreenGamepadPlatform.instance;
 
   test('$MethodChannelOnscreenGamepad is the default instance', () {
     expect(initialPlatform, isInstanceOf<MethodChannelOnscreenGamepad>());
