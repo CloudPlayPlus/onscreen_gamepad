@@ -99,6 +99,7 @@ void main() {
     expect(leftStick.input.kind, OnscreenGamepadInputKind.gamepadStick);
     expect(leftStick.input.xAxis, 'leftX');
     expect(leftStick.input.yAxis, 'leftY');
+    expect(leftStick.input.buttonCode, 'leftStickButton');
     expect(aButton.input.kind, OnscreenGamepadInputKind.gamepadButton);
     expect(aButton.input.code, 'a');
     expect(aButton.anchor, OnscreenGamepadAnchor.bottomRight);

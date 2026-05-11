@@ -26,7 +26,19 @@ enum OnscreenGamepadInputKind {
   gamepadButton,
   gamepadStick,
   keyboardKey,
+  mouseButton,
+  mouseMove,
+  mouseMode,
   custom,
+}
+
+enum OnscreenGamepadControlBehavior {
+  normal,
+  toggle,
+  fpsFire,
+  wasdStick,
+  eightDirectionMouse,
+  mouseModeCycle,
 }
 
 class OnscreenGamepadInput {
@@ -35,32 +47,67 @@ class OnscreenGamepadInput {
     required this.code,
     this.xAxis,
     this.yAxis,
+    this.buttonCode,
+    this.numericCode,
+    this.payload = const {},
   });
 
-  const OnscreenGamepadInput.gamepadButton(String code)
-    : this(kind: OnscreenGamepadInputKind.gamepadButton, code: code);
+  const OnscreenGamepadInput.gamepadButton(String code, {int? numericCode})
+    : this(
+        kind: OnscreenGamepadInputKind.gamepadButton,
+        code: code,
+        numericCode: numericCode,
+      );
 
   const OnscreenGamepadInput.gamepadStick({
     required String code,
     required String xAxis,
     required String yAxis,
+    String? buttonCode,
   }) : this(
          kind: OnscreenGamepadInputKind.gamepadStick,
          code: code,
          xAxis: xAxis,
          yAxis: yAxis,
+         buttonCode: buttonCode,
        );
 
-  const OnscreenGamepadInput.keyboardKey(String code)
-    : this(kind: OnscreenGamepadInputKind.keyboardKey, code: code);
+  const OnscreenGamepadInput.keyboardKey(String code, {int? numericCode})
+    : this(
+        kind: OnscreenGamepadInputKind.keyboardKey,
+        code: code,
+        numericCode: numericCode,
+      );
 
-  const OnscreenGamepadInput.custom(String code)
-    : this(kind: OnscreenGamepadInputKind.custom, code: code);
+  const OnscreenGamepadInput.mouseButton(int buttonId)
+    : this(
+        kind: OnscreenGamepadInputKind.mouseButton,
+        code: 'mouseButton',
+        numericCode: buttonId,
+      );
+
+  const OnscreenGamepadInput.mouseMove({String code = 'mouseMove'})
+    : this(kind: OnscreenGamepadInputKind.mouseMove, code: code);
+
+  const OnscreenGamepadInput.mouseMode(String code)
+    : this(kind: OnscreenGamepadInputKind.mouseMode, code: code);
+
+  const OnscreenGamepadInput.custom(
+    String code, {
+    Map<String, Object?> payload = const {},
+  }) : this(
+         kind: OnscreenGamepadInputKind.custom,
+         code: code,
+         payload: payload,
+       );
 
   final OnscreenGamepadInputKind kind;
   final String code;
   final String? xAxis;
   final String? yAxis;
+  final String? buttonCode;
+  final int? numericCode;
+  final Map<String, Object?> payload;
 
   Map<String, Object?> toJson() {
     return {
@@ -68,6 +115,9 @@ class OnscreenGamepadInput {
       'c': code,
       if (xAxis != null) 'x': xAxis,
       if (yAxis != null) 'y': yAxis,
+      if (buttonCode != null) 'b': buttonCode,
+      if (numericCode != null) 'n': numericCode,
+      if (payload.isNotEmpty) 'p': payload,
     };
   }
 
@@ -81,6 +131,9 @@ class OnscreenGamepadInput {
       code: _string(json['c'], ''),
       xAxis: _nullableString(json['x']),
       yAxis: _nullableString(json['y']),
+      buttonCode: _nullableString(json['b']),
+      numericCode: _nullableInt(json['n']),
+      payload: _map(json['p']),
     );
   }
 }
@@ -155,6 +208,8 @@ class OnscreenGamepadControl {
     required this.role,
     required this.sizeTier,
     required this.input,
+    this.behavior = OnscreenGamepadControlBehavior.normal,
+    this.behaviorConfig = const {},
     this.sizeScale = 1,
     this.color,
     this.sortOrder = 0,
@@ -168,6 +223,8 @@ class OnscreenGamepadControl {
   final OnscreenGamepadControlRole role;
   final OnscreenGamepadSizeTier sizeTier;
   final OnscreenGamepadInput input;
+  final OnscreenGamepadControlBehavior behavior;
+  final Map<String, Object?> behaviorConfig;
   final double sizeScale;
   final Color? color;
   final int sortOrder;
@@ -181,6 +238,8 @@ class OnscreenGamepadControl {
     OnscreenGamepadControlRole? role,
     OnscreenGamepadSizeTier? sizeTier,
     OnscreenGamepadInput? input,
+    OnscreenGamepadControlBehavior? behavior,
+    Map<String, Object?>? behaviorConfig,
     double? sizeScale,
     Color? color,
     int? sortOrder,
@@ -194,6 +253,8 @@ class OnscreenGamepadControl {
       role: role ?? this.role,
       sizeTier: sizeTier ?? this.sizeTier,
       input: input ?? this.input,
+      behavior: behavior ?? this.behavior,
+      behaviorConfig: behaviorConfig ?? this.behaviorConfig,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -210,6 +271,9 @@ class OnscreenGamepadControl {
       'r': role.name,
       's': sizeTier.name,
       'in': input.toJson(),
+      if (behavior != OnscreenGamepadControlBehavior.normal)
+        'bh': behavior.name,
+      if (behaviorConfig.isNotEmpty) 'bc': behaviorConfig,
       if (sizeScale != 1) 'z': sizeScale,
       if (color != null) 'co': color!.toARGB32(),
       if (sortOrder != 0) 'so': sortOrder,
@@ -242,6 +306,12 @@ class OnscreenGamepadControl {
         OnscreenGamepadSizeTier.medium,
       ),
       input: OnscreenGamepadInput.fromJson(_map(json['in'])),
+      behavior: _enumByName(
+        OnscreenGamepadControlBehavior.values,
+        json['bh'],
+        OnscreenGamepadControlBehavior.normal,
+      ),
+      behaviorConfig: _map(json['bc']),
       sizeScale: _double(json['z'], 1),
       color: _nullableColor(json['co']),
       sortOrder: _int(json['so'], 0),
@@ -426,6 +496,16 @@ int _int(Object? value, int fallback) {
     return value.toInt();
   }
   return fallback;
+}
+
+int? _nullableInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  return null;
 }
 
 Color _color(Object? value, Color fallback) {

@@ -8,7 +8,9 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 - Xbox 默认 profile：摇杆、D-pad、ABXY、LB/LT/RB/RT、View/Menu/Xbox
 - 只命中真实按钮区域，overlay 空白区域不拦截下方视频触摸
 - 摇杆支持 down/up 和 `(-1..1, -1..1)` 归一化拖动向量
+- 统一事件模型：gamepad、keyboard、mouse、custom 输入都走 `OnscreenGamepadEvent`
 - profile 支持 compact JSON 往返，便于主仓持久化
+- storage-agnostic profile store/controller：主仓可直接接入本地存储、云同步和 host 绑定
 - example app 可预览手机、折叠屏、平板和桌面窗口效果
 
 布局公式和默认参数见 [docs/screen_button_layout.md](docs/screen_button_layout.md)。
@@ -21,11 +23,12 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 
 | 责任 | 所属 |
 | --- | --- |
-| profile CRUD、启用开关、drawer 入口 | CloudPlayPlus |
+| 启用开关、drawer 入口、最终保存时机 | CloudPlayPlus |
 | profile 本地持久化 / 后续云同步 / host 绑定 | CloudPlayPlus |
+| profile store/controller、导入导出模型 | onscreen_gamepad |
 | 五区布局、按钮大小、默认 Xbox profile | onscreen_gamepad |
-| 触摸命中、按钮 down/up、摇杆向量 | onscreen_gamepad |
-| 把 `OnscreenGamepadInput` 转成远端输入包 | CloudPlayPlus |
+| 触摸命中、按钮 down/up、摇杆向量、统一事件模型 | onscreen_gamepad |
+| 把 `OnscreenGamepadInput` / `OnscreenGamepadEvent` 转成远端输入包 | CloudPlayPlus |
 
 ## 安装
 
@@ -56,16 +59,13 @@ Stack(
         child: OnscreenGamepadOverlay(
           profile: activeProfile,
           activeControlIds: pressedIds,
-          onControlDown: (control) {
-            pressedIds.add(control.id);
-            sendButton(control.input, pressed: true);
-          },
-          onControlUp: (control) {
-            pressedIds.remove(control.id);
-            sendButton(control.input, pressed: false);
-          },
-          onStickChanged: (control, value) {
-            sendStick(control.input, value);
+          onEvent: (event) {
+            if (event.isDown) {
+              pressedIds.add(event.control.id);
+            } else if (event.isUp) {
+              pressedIds.remove(event.control.id);
+            }
+            sendInputEvent(event);
           },
         ),
       ),
@@ -74,6 +74,8 @@ Stack(
 ```
 
 `pressedIds` 推荐由主仓维护，这样网络延迟、页面重建或外部状态变更时，按钮高亮状态仍然是上层的真实状态。
+
+`onControlDown`、`onControlUp` 和 `onStickChanged` 是兼容旧接入的便捷回调。新接入建议优先使用 `onEvent`，这样后续键盘、鼠标、FPS 开火按钮和自定义输入可以走同一条转换链路。
 
 ## 核心 API
 
@@ -86,6 +88,7 @@ OnscreenGamepadOverlay({
   Size? logicalSize,
   bool showZones = false,
   Set<String> activeControlIds = const {},
+  OnscreenGamepadEventCallback? onEvent,
   OnscreenGamepadControlEvent? onControlDown,
   OnscreenGamepadControlEvent? onControlUp,
   OnscreenGamepadStickEvent? onStickChanged,
@@ -97,6 +100,7 @@ OnscreenGamepadOverlay({
 - `logicalSize`：可选逻辑尺寸。通常不传，直接用当前 widget 尺寸；demo 用它模拟不同设备。
 - `showZones`：调试用，显示五个 anchor 区域。
 - `activeControlIds`：外部受控高亮状态。
+- `onEvent`：统一输入事件回调，推荐主仓优先接入。
 - `onControlDown`：所有控件 pointer down 都会触发，包括摇杆。
 - `onControlUp`：pointer up/cancel 触发。摇杆会先发送回零，再触发 up。
 - `onStickChanged`：仅摇杆触发，`Offset.dx/dy` 范围是 `-1..1`，屏幕向右/向下为正。
@@ -133,6 +137,7 @@ const OnscreenGamepadControl(
   role: OnscreenGamepadControlRole.primary,
   sizeTier: OnscreenGamepadSizeTier.medium,
   input: OnscreenGamepadInput.gamepadButton('a'),
+  behavior: OnscreenGamepadControlBehavior.normal,
   sizeScale: 1,
 )
 ```
@@ -142,6 +147,7 @@ CloudPlayPlus 接入时建议：
 - 用 `id` 管理编辑、删除、排序和 active state。
 - 用 `label` 绘制按钮文字，不把它当输入语义。
 - 用 `input` 转远端输入协议。
+- 用 `behavior` 描述按钮行为，例如 normal、toggle、fpsFire、wasdStick。
 - 保存 `anchor + offset`，不要保存像素坐标。
 
 ### `OnscreenGamepadInput`
@@ -150,12 +156,17 @@ CloudPlayPlus 接入时建议：
 
 ```dart
 const OnscreenGamepadInput.gamepadButton('a');
+const OnscreenGamepadInput.gamepadButton('a', numericCode: 0x1004);
 const OnscreenGamepadInput.gamepadStick(
   code: 'leftStick',
   xAxis: 'leftX',
   yAxis: 'leftY',
+  buttonCode: 'leftStickButton',
 );
-const OnscreenGamepadInput.keyboardKey('Space');
+const OnscreenGamepadInput.keyboardKey('Space', numericCode: 32);
+const OnscreenGamepadInput.mouseButton(1);
+const OnscreenGamepadInput.mouseMove();
+const OnscreenGamepadInput.mouseMode('leftClick');
 const OnscreenGamepadInput.custom('macro.openMenu');
 ```
 
@@ -168,6 +179,11 @@ void sendButton(OnscreenGamepadInput input, {required bool pressed}) {
       gamepadSender.sendButton(input.code, pressed: pressed);
     case OnscreenGamepadInputKind.keyboardKey:
       keyboardSender.sendKey(input.code, pressed: pressed);
+    case OnscreenGamepadInputKind.mouseButton:
+      mouseSender.sendButton(input.numericCode ?? 1, pressed: pressed);
+    case OnscreenGamepadInputKind.mouseMove:
+    case OnscreenGamepadInputKind.mouseMode:
+      break;
     case OnscreenGamepadInputKind.custom:
       customInputBus.emit(input.code, pressed: pressed);
     case OnscreenGamepadInputKind.gamepadStick:
@@ -183,6 +199,65 @@ void sendStick(OnscreenGamepadInput input, Offset value) {
   gamepadSender.sendAxis(input.yAxis!, value.dy);
 }
 ```
+
+### `OnscreenGamepadEvent`
+
+新接入建议从 `onEvent` 转输入协议：
+
+```dart
+void sendInputEvent(OnscreenGamepadEvent event) {
+  switch (event.type) {
+    case OnscreenGamepadEventType.gamepadButton:
+      gamepadSender.sendButton(event.input.code, pressed: event.isDown);
+    case OnscreenGamepadEventType.gamepadStick:
+      final value = event.value;
+      if (value != null) {
+        gamepadSender.sendAxis(event.input.xAxis!, value.dx);
+        gamepadSender.sendAxis(event.input.yAxis!, value.dy);
+      } else if (event.input.buttonCode != null) {
+        gamepadSender.sendButton(event.input.buttonCode!, pressed: event.isDown);
+      }
+    case OnscreenGamepadEventType.keyboardKey:
+      keyboardSender.sendKey(event.input.numericCode, pressed: event.isDown);
+    case OnscreenGamepadEventType.mouseButton:
+      mouseSender.sendButton(event.input.numericCode ?? 1, pressed: event.isDown);
+    case OnscreenGamepadEventType.mouseMove:
+      final delta = event.delta;
+      if (delta != null) {
+        mouseSender.move(delta.dx, delta.dy);
+      }
+    case OnscreenGamepadEventType.mouseMode:
+    case OnscreenGamepadEventType.custom:
+      customInputBus.emit(event.input.code, event);
+  }
+}
+```
+
+### `OnscreenGamepadProfileStore`
+
+插件提供 storage-agnostic 的 profile 管理模型，不直接读写 `SharedPreferences`：
+
+```dart
+final controller = OnscreenGamepadProfileController(
+  OnscreenGamepadProfileStore(
+    activeProfileId: 'default-local',
+    profiles: [
+      kOnscreenGamepadXboxProfile.copyWith(
+        id: 'default-local',
+        name: 'Default',
+      ),
+    ],
+  ),
+);
+
+controller.addControl(customControl);
+controller.updateControl(customControl.copyWith(label: 'Jump'));
+controller.removeControl(customControl.id);
+
+final json = controller.store.toJson();
+```
+
+主仓可以把 `controller.store.toJson()` 放进本地 storage；二阶段云同步和三阶段 host 绑定时，在外层再包用户、host 或更新时间信息即可。
 
 ## 存储格式
 
@@ -216,13 +291,13 @@ JSON 使用短 key，适合主仓存在本地 storage 后续再同步：
 }
 ```
 
-推荐主仓外层再包一层版本号，例如：
+插件也提供 profile store 外层结构：
 
 ```json
 {
-  "version": 1,
-  "activeProfileId": "xbox-default",
-  "profiles": []
+  "v": 1,
+  "a": "xbox-default",
+  "p": []
 }
 ```
 

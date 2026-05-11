@@ -6,7 +6,7 @@ repository: https://github.com/CloudPlayPlus/onscreen_gamepad
 issue_tracker: https://github.com/CloudPlayPlus/onscreen_gamepad/issues
 
 environment:
-  sdk: ^3.11.5
+  sdk: ^3.9.2
   flutter: '>=3.3.0'
 
 dependencies:
