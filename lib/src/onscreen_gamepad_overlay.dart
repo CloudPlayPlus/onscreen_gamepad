@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'onscreen_gamepad_events.dart';
 import 'onscreen_gamepad_layout.dart';
 import 'onscreen_gamepad_models.dart';
 
@@ -18,6 +19,7 @@ class OnscreenGamepadOverlay extends StatelessWidget {
     this.logicalSize,
     this.showZones = false,
     this.activeControlIds = const {},
+    this.onEvent,
     this.onControlDown,
     this.onControlUp,
     this.onStickChanged,
@@ -28,6 +30,7 @@ class OnscreenGamepadOverlay extends StatelessWidget {
   final Size? logicalSize;
   final bool showZones;
   final Set<String> activeControlIds;
+  final OnscreenGamepadEventCallback? onEvent;
   final OnscreenGamepadControlEvent? onControlDown;
   final OnscreenGamepadControlEvent? onControlUp;
   final OnscreenGamepadStickEvent? onStickChanged;
@@ -63,6 +66,7 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                   placed: placed,
                   profile: profile,
                   isActive: activeControlIds.contains(placed.control.id),
+                  onEvent: onEvent,
                   onDown: onControlDown,
                   onUp: onControlUp,
                   onStickChanged: onStickChanged,
@@ -81,6 +85,7 @@ class _ControlButton extends StatefulWidget {
     required this.placed,
     required this.profile,
     required this.isActive,
+    this.onEvent,
     this.onDown,
     this.onUp,
     this.onStickChanged,
@@ -89,6 +94,7 @@ class _ControlButton extends StatefulWidget {
   final OnscreenGamepadPlacedControl placed;
   final OnscreenGamepadProfile profile;
   final bool isActive;
+  final OnscreenGamepadEventCallback? onEvent;
   final OnscreenGamepadControlEvent? onDown;
   final OnscreenGamepadControlEvent? onUp;
   final OnscreenGamepadStickEvent? onStickChanged;
@@ -100,6 +106,9 @@ class _ControlButton extends StatefulWidget {
 class _ControlButtonState extends State<_ControlButton> {
   int? _activePointer;
   Offset _stickValue = Offset.zero;
+  Offset? _lastPointerPosition;
+  bool _isToggled = false;
+  int _mouseModeIndex = 0;
 
   @override
   void didUpdateWidget(covariant _ControlButton oldWidget) {
@@ -107,6 +116,8 @@ class _ControlButtonState extends State<_ControlButton> {
     if (oldWidget.placed.control.id != widget.placed.control.id) {
       _activePointer = null;
       _stickValue = Offset.zero;
+      _lastPointerPosition = null;
+      _isToggled = false;
     }
   }
 
@@ -121,9 +132,8 @@ class _ControlButtonState extends State<_ControlButton> {
       _withOpacity(Colors.white, 0.22),
       color,
     );
-    final fillColor = widget.isActive || _activePointer != null
-        ? activeColor
-        : color;
+    final isActive = widget.isActive || _activePointer != null || _isToggled;
+    final fillColor = isActive ? activeColor : color;
     final foreground = _bestTextColor(fillColor);
 
     return Listener(
@@ -138,7 +148,7 @@ class _ControlButtonState extends State<_ControlButton> {
           fillColor: fillColor,
           foreground: foreground,
           size: widget.placed.visualSize,
-          isActive: widget.isActive || _activePointer != null,
+          isActive: isActive,
           stickValue: _stickValue,
         ),
       ),
@@ -149,19 +159,36 @@ class _ControlButtonState extends State<_ControlButton> {
     if (_activePointer != null) {
       return;
     }
-    _activePointer = event.pointer;
+    setState(() {
+      _activePointer = event.pointer;
+      _lastPointerPosition = event.localPosition;
+    });
     final control = widget.placed.control;
-    widget.onDown?.call(control);
+    if (control.behavior == OnscreenGamepadControlBehavior.toggle) {
+      _setToggled(!_isToggled);
+      return;
+    }
+    if (control.behavior == OnscreenGamepadControlBehavior.mouseModeCycle) {
+      _cycleMouseMode(control);
+      return;
+    }
+    _emitControlPhase(OnscreenGamepadEventPhase.down);
     if (_isStick(control)) {
       _updateStick(event.localPosition);
     }
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
-    if (event.pointer != _activePointer || !_isStick(widget.placed.control)) {
+    if (event.pointer != _activePointer) {
       return;
     }
-    _updateStick(event.localPosition);
+    final control = widget.placed.control;
+    if (_isStick(control)) {
+      _updateStick(event.localPosition);
+    }
+    if (control.behavior == OnscreenGamepadControlBehavior.fpsFire) {
+      _emitFpsFireMove(event.localPosition);
+    }
   }
 
   void _handlePointerUp(PointerUpEvent event) {
@@ -180,11 +207,28 @@ class _ControlButtonState extends State<_ControlButton> {
 
   void _releasePointer() {
     final control = widget.placed.control;
+    if (control.behavior == OnscreenGamepadControlBehavior.toggle) {
+      setState(() {
+        _activePointer = null;
+        _lastPointerPosition = null;
+      });
+      return;
+    }
+    if (control.behavior == OnscreenGamepadControlBehavior.mouseModeCycle) {
+      setState(() {
+        _activePointer = null;
+        _lastPointerPosition = null;
+      });
+      return;
+    }
     if (_isStick(control)) {
       _setStickValue(Offset.zero);
     }
-    widget.onUp?.call(control);
-    _activePointer = null;
+    _emitControlPhase(OnscreenGamepadEventPhase.up);
+    setState(() {
+      _activePointer = null;
+      _lastPointerPosition = null;
+    });
   }
 
   void _updateStick(Offset localPosition) {
@@ -203,7 +247,103 @@ class _ControlButtonState extends State<_ControlButton> {
       return;
     }
     setState(() => _stickValue = value);
+    widget.onEvent?.call(
+      OnscreenGamepadEvent.stickChanged(
+        control: widget.placed.control,
+        value: value,
+      ),
+    );
     widget.onStickChanged?.call(widget.placed.control, value);
+  }
+
+  void _emitControlPhase(OnscreenGamepadEventPhase phase) {
+    final control = widget.placed.control;
+    widget.onEvent?.call(_eventForPhase(control, phase));
+    switch (phase) {
+      case OnscreenGamepadEventPhase.down:
+        widget.onDown?.call(control);
+      case OnscreenGamepadEventPhase.up:
+        widget.onUp?.call(control);
+      case OnscreenGamepadEventPhase.change:
+        break;
+    }
+  }
+
+  OnscreenGamepadEvent _eventForPhase(
+    OnscreenGamepadControl control,
+    OnscreenGamepadEventPhase phase,
+  ) {
+    if (control.input.kind == OnscreenGamepadInputKind.mouseMode) {
+      return OnscreenGamepadEvent.mouseMode(
+        control: control,
+        mode: control.input.code,
+        phase: phase,
+      );
+    }
+    return OnscreenGamepadEvent.control(control: control, phase: phase);
+  }
+
+  void _setToggled(bool value) {
+    setState(() => _isToggled = value);
+    _emitControlPhase(
+      value ? OnscreenGamepadEventPhase.down : OnscreenGamepadEventPhase.up,
+    );
+  }
+
+  void _cycleMouseMode(OnscreenGamepadControl control) {
+    final modes = _stringListConfig('modes');
+    final mode = modes.isEmpty
+        ? control.input.code
+        : modes[_mouseModeIndex % modes.length];
+    if (modes.isNotEmpty) {
+      _mouseModeIndex = (_mouseModeIndex + 1) % modes.length;
+    }
+    widget.onEvent?.call(
+      OnscreenGamepadEvent.mouseMode(
+        control: control,
+        mode: mode,
+        phase: OnscreenGamepadEventPhase.change,
+      ),
+    );
+  }
+
+  void _emitFpsFireMove(Offset localPosition) {
+    final lastPosition = _lastPointerPosition;
+    if (lastPosition == null) {
+      _lastPointerPosition = localPosition;
+      return;
+    }
+    final sensitivity = _doubleConfig('sensitivity', 1.0);
+    final threshold = _doubleConfig('threshold', 0.5);
+    final delta = (localPosition - lastPosition) * sensitivity;
+    if (delta.dx.abs() > threshold || delta.dy.abs() > threshold) {
+      widget.onEvent?.call(
+        OnscreenGamepadEvent.mouseMove(
+          control: widget.placed.control,
+          delta: delta,
+        ),
+      );
+      _lastPointerPosition = localPosition;
+    }
+  }
+
+  double _doubleConfig(String key, double fallback) {
+    final value = widget.placed.control.behaviorConfig[key];
+    if (value is num) {
+      return value.toDouble();
+    }
+    return fallback;
+  }
+
+  List<String> _stringListConfig(String key) {
+    final value = widget.placed.control.behaviorConfig[key];
+    if (value is List) {
+      return [
+        for (final item in value)
+          if (item is String && item.isNotEmpty) item,
+      ];
+    }
+    return const [];
   }
 
   bool _isStick(OnscreenGamepadControl control) {
