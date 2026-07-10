@@ -6,6 +6,9 @@ import 'onscreen_gamepad_events.dart';
 import 'onscreen_gamepad_layout.dart';
 import 'onscreen_gamepad_models.dart';
 
+const _kStickTapThresholdRatio = 0.01;
+const _kStickTapButtonDelay = Duration(milliseconds: 32);
+
 typedef OnscreenGamepadControlEvent =
     void Function(OnscreenGamepadControl control);
 typedef OnscreenGamepadStickEvent =
@@ -106,6 +109,8 @@ class _ControlButton extends StatefulWidget {
 class _ControlButtonState extends State<_ControlButton> {
   int? _activePointer;
   Offset _stickValue = Offset.zero;
+  Offset? _stickOrigin;
+  bool _stickTapCandidate = false;
   Offset? _lastPointerPosition;
   bool _isToggled = false;
   int _mouseModeIndex = 0;
@@ -116,6 +121,8 @@ class _ControlButtonState extends State<_ControlButton> {
     if (oldWidget.placed.control.id != widget.placed.control.id) {
       _activePointer = null;
       _stickValue = Offset.zero;
+      _stickOrigin = null;
+      _stickTapCandidate = false;
       _lastPointerPosition = null;
       _isToggled = false;
     }
@@ -174,7 +181,7 @@ class _ControlButtonState extends State<_ControlButton> {
     }
     _emitControlPhase(OnscreenGamepadEventPhase.down);
     if (_isStick(control)) {
-      _updateStick(event.localPosition);
+      _beginStick(event.localPosition);
     }
   }
 
@@ -202,14 +209,16 @@ class _ControlButtonState extends State<_ControlButton> {
     if (event.pointer != _activePointer) {
       return;
     }
-    _releasePointer();
+    _releasePointer(allowStickTap: false);
   }
 
-  void _releasePointer() {
+  void _releasePointer({bool allowStickTap = true}) {
     final control = widget.placed.control;
     if (control.behavior == OnscreenGamepadControlBehavior.toggle) {
       setState(() {
         _activePointer = null;
+        _stickOrigin = null;
+        _stickTapCandidate = false;
         _lastPointerPosition = null;
       });
       return;
@@ -217,29 +226,77 @@ class _ControlButtonState extends State<_ControlButton> {
     if (control.behavior == OnscreenGamepadControlBehavior.mouseModeCycle) {
       setState(() {
         _activePointer = null;
+        _stickOrigin = null;
+        _stickTapCandidate = false;
         _lastPointerPosition = null;
       });
       return;
     }
+    final shouldEmitStickTap =
+        allowStickTap && _isStick(control) && _stickTapCandidate;
     if (_isStick(control)) {
+      if (shouldEmitStickTap) {
+        _emitStickButtonTap(control);
+      }
       _setStickValue(Offset.zero);
     }
     _emitControlPhase(OnscreenGamepadEventPhase.up);
     setState(() {
       _activePointer = null;
+      _stickOrigin = null;
+      _stickTapCandidate = false;
       _lastPointerPosition = null;
     });
   }
 
+  void _beginStick(Offset localPosition) {
+    _stickOrigin = localPosition;
+    _stickTapCandidate = true;
+    _setStickValue(Offset.zero);
+  }
+
   void _updateStick(Offset localPosition) {
     final half = widget.placed.hitSize / 2;
-    final raw = Offset(
-      (localPosition.dx - half) / half,
-      (localPosition.dy - half) / half,
-    );
+    final origin = _stickOrigin ?? Offset(half, half);
+    final delta = localPosition - origin;
+    final raw = delta / half;
     final distance = raw.distance;
+    if (distance > _kStickTapThresholdRatio) {
+      _stickTapCandidate = false;
+    }
     final value = distance <= 1 || distance == 0 ? raw : raw / distance;
     _setStickValue(value);
+  }
+
+  void _emitStickButtonTap(OnscreenGamepadControl control) {
+    final buttonCode = control.input.buttonCode;
+    if (control.input.kind != OnscreenGamepadInputKind.gamepadStick ||
+        buttonCode == null ||
+        buttonCode.isEmpty) {
+      return;
+    }
+    final buttonInput = OnscreenGamepadInput.gamepadButton(buttonCode);
+    widget.onEvent?.call(
+      OnscreenGamepadEvent(
+        type: OnscreenGamepadEventType.gamepadButton,
+        phase: OnscreenGamepadEventPhase.down,
+        control: control,
+        input: buttonInput,
+      ),
+    );
+    Future<void>.delayed(_kStickTapButtonDelay, () {
+      if (!mounted) {
+        return;
+      }
+      widget.onEvent?.call(
+        OnscreenGamepadEvent(
+          type: OnscreenGamepadEventType.gamepadButton,
+          phase: OnscreenGamepadEventPhase.up,
+          control: control,
+          input: buttonInput,
+        ),
+      );
+    });
   }
 
   void _setStickValue(Offset value) {

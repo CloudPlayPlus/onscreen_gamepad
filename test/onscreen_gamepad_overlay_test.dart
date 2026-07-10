@@ -113,4 +113,91 @@ void main() {
     ]);
     expect(events.map((event) => event.mode), ['leftClick', 'rightClick']);
   });
+
+  testWidgets('stick presses use the pointer down position as center', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    final profile = kOnscreenGamepadXboxProfile.copyWith(
+      controls: [
+        kOnscreenGamepadXboxProfile.controls.firstWhere(
+          (control) => control.id == 'left-stick',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: OnscreenGamepadOverlay(profile: profile, onEvent: events.add),
+        ),
+      ),
+    );
+
+    final stickRect = tester.getRect(find.byKey(const ValueKey('left-stick')));
+    final startPosition = stickRect.center + Offset(stickRect.width * 0.24, 0);
+    final gesture = await tester.startGesture(startPosition);
+    await tester.pump();
+
+    expect(events, hasLength(1));
+    expect(events.single.phase, OnscreenGamepadEventPhase.down);
+
+    await gesture.moveBy(Offset(stickRect.width * 0.25, 0));
+    await tester.pump();
+
+    final stickEvent = events.last;
+    expect(stickEvent.phase, OnscreenGamepadEventPhase.change);
+    expect(stickEvent.value!.dx, closeTo(0.5, 0.001));
+    expect(stickEvent.value!.dy, closeTo(0, 0.001));
+
+    await gesture.up();
+  });
+
+  testWidgets('quick gamepad stick taps emit the stick button', (tester) async {
+    final events = <OnscreenGamepadEvent>[];
+    final profile = kOnscreenGamepadXboxProfile.copyWith(
+      controls: [
+        kOnscreenGamepadXboxProfile.controls.firstWhere(
+          (control) => control.id == 'left-stick',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: OnscreenGamepadOverlay(profile: profile, onEvent: events.add),
+        ),
+      ),
+    );
+
+    final stickRect = tester.getRect(find.byKey(const ValueKey('left-stick')));
+    await tester.tapAt(stickRect.center + Offset(stickRect.width * 0.24, 0));
+    await tester.pump();
+
+    expect(events.map((event) => event.phase), [
+      OnscreenGamepadEventPhase.down,
+      OnscreenGamepadEventPhase.down,
+      OnscreenGamepadEventPhase.up,
+    ]);
+    expect(events[1].input.kind, OnscreenGamepadInputKind.gamepadButton);
+    expect(events[1].input.code, 'leftStickButton');
+
+    await tester.pump(const Duration(milliseconds: 32));
+
+    expect(events.map((event) => event.phase), [
+      OnscreenGamepadEventPhase.down,
+      OnscreenGamepadEventPhase.down,
+      OnscreenGamepadEventPhase.up,
+      OnscreenGamepadEventPhase.up,
+    ]);
+    expect(events.last.input.kind, OnscreenGamepadInputKind.gamepadButton);
+    expect(events.last.input.code, 'leftStickButton');
+  });
 }
