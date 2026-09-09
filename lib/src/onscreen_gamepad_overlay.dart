@@ -132,14 +132,13 @@ class _ControlButtonState extends State<_ControlButton> {
   Widget build(BuildContext context) {
     final control = widget.placed.control;
     final backgroundColor = control.color ?? widget.profile.defaultColor;
-    final color = _withOpacity(
-      backgroundColor,
-      widget.profile.backgroundOpacity,
-    );
-    final activeColor = Color.alphaBlend(
+    final backgroundOpacity = widget.profile.backgroundOpacity;
+    final color = _withOpacity(backgroundColor, backgroundOpacity);
+    final activeBaseColor = Color.alphaBlend(
       _withOpacity(Colors.white, 0.22),
-      color,
+      backgroundColor.withAlpha(255),
     );
+    final activeColor = _withOpacity(activeBaseColor, backgroundOpacity);
     final isActive = widget.isActive || _activePointer != null || _isToggled;
     final fillColor = isActive ? activeColor : color;
     final foreground = _withOpacity(
