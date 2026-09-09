@@ -28,6 +28,16 @@ input: 输入语义，例如 gamepadButton(a) 或 gamepadStick(leftX, leftY, lef
 behavior: 控件行为，例如 normal、toggle、fpsFire、wasdStick
 ```
 
+Profile 视觉字段：
+
+```text
+defaultColor: 底盘默认颜色，当前为 #090E16
+backgroundOpacity: 底盘不透明度，0.0..1.0，默认 0.36
+foregroundOpacity: 文字、图标和摇杆中心点不透明度，0.0..1.0，默认 0.60
+```
+
+按键底盘和摇杆中心点不绘制白色边框。透明度设为 `0` 只隐藏对应视觉层，hit rect 和输入语义保持不变。
+
 按钮中心点：
 
 ```text

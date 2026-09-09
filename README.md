@@ -111,8 +111,9 @@ OnscreenGamepadOverlay({
 const profile = OnscreenGamepadProfile(
   id: 'xbox-default',
   name: 'Xbox Default',
-  defaultColor: Color(0xFFE7F0FF),
-  opacity: 0.72,
+  defaultColor: Color(0xFF090E16),
+  backgroundOpacity: 0.36,
+  foregroundOpacity: 0.60,
   controls: [...],
 );
 ```
@@ -122,7 +123,8 @@ const profile = OnscreenGamepadProfile(
 - `id`：profile 稳定 id。
 - `name`：用户可见名称。
 - `defaultColor`：默认按钮颜色；control 未设置颜色时使用它。
-- `opacity`：按钮整体透明度。
+- `backgroundOpacity`：按钮底盘不透明度，范围 `0.0..1.0`。
+- `foregroundOpacity`：文字、图标和摇杆中心点不透明度，范围 `0.0..1.0`。
 - `controls`：按钮列表。
 
 ### `OnscreenGamepadControl`

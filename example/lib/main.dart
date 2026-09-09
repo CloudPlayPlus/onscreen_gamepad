@@ -37,8 +37,9 @@ class _GamepadDemoPageState extends State<GamepadDemoPage> {
   _DemoDevice _device = _DemoDevice.phone;
   bool _landscape = true;
   bool _showZones = true;
-  double _opacity = 0.72;
-  Color _defaultColor = const Color(0xFFE7F0FF);
+  double _backgroundOpacity = 0.36;
+  double _foregroundOpacity = 0.60;
+  Color _defaultColor = const Color(0xFF090E16);
   final Set<String> _activeControlIds = {};
   String _lastEvent = 'Ready';
 
@@ -51,7 +52,8 @@ class _GamepadDemoPageState extends State<GamepadDemoPage> {
   Widget build(BuildContext context) {
     final profile = kOnscreenGamepadXboxProfile.copyWith(
       defaultColor: _defaultColor,
-      opacity: _opacity,
+      backgroundOpacity: _backgroundOpacity,
+      foregroundOpacity: _foregroundOpacity,
     );
 
     return Scaffold(
@@ -80,14 +82,18 @@ class _GamepadDemoPageState extends State<GamepadDemoPage> {
               device: _device,
               landscape: _landscape,
               showZones: _showZones,
-              opacity: _opacity,
+              backgroundOpacity: _backgroundOpacity,
+              foregroundOpacity: _foregroundOpacity,
               defaultColor: _defaultColor,
               logicalSize: _logicalSize,
               lastEvent: _lastEvent,
               onDeviceChanged: (device) => setState(() => _device = device),
               onLandscapeChanged: (value) => setState(() => _landscape = value),
               onShowZonesChanged: (value) => setState(() => _showZones = value),
-              onOpacityChanged: (value) => setState(() => _opacity = value),
+              onBackgroundOpacityChanged: (value) =>
+                  setState(() => _backgroundOpacity = value),
+              onForegroundOpacityChanged: (value) =>
+                  setState(() => _foregroundOpacity = value),
               onDefaultColorChanged: (color) =>
                   setState(() => _defaultColor = color),
             ),
@@ -194,28 +200,32 @@ class _DemoToolbar extends StatelessWidget {
     required this.device,
     required this.landscape,
     required this.showZones,
-    required this.opacity,
+    required this.backgroundOpacity,
+    required this.foregroundOpacity,
     required this.defaultColor,
     required this.logicalSize,
     required this.lastEvent,
     required this.onDeviceChanged,
     required this.onLandscapeChanged,
     required this.onShowZonesChanged,
-    required this.onOpacityChanged,
+    required this.onBackgroundOpacityChanged,
+    required this.onForegroundOpacityChanged,
     required this.onDefaultColorChanged,
   });
 
   final _DemoDevice device;
   final bool landscape;
   final bool showZones;
-  final double opacity;
+  final double backgroundOpacity;
+  final double foregroundOpacity;
   final Color defaultColor;
   final Size logicalSize;
   final String lastEvent;
   final ValueChanged<_DemoDevice> onDeviceChanged;
   final ValueChanged<bool> onLandscapeChanged;
   final ValueChanged<bool> onShowZonesChanged;
-  final ValueChanged<double> onOpacityChanged;
+  final ValueChanged<double> onBackgroundOpacityChanged;
+  final ValueChanged<double> onForegroundOpacityChanged;
   final ValueChanged<Color> onDefaultColorChanged;
 
   @override
@@ -275,10 +285,20 @@ class _DemoToolbar extends StatelessWidget {
               SizedBox(
                 width: 120,
                 child: Slider(
-                  value: opacity,
-                  min: 0.35,
-                  max: 0.92,
-                  onChanged: onOpacityChanged,
+                  value: backgroundOpacity,
+                  min: 0,
+                  max: 1,
+                  onChanged: onBackgroundOpacityChanged,
+                ),
+              ),
+              const Icon(Icons.text_fields, size: 20),
+              SizedBox(
+                width: 120,
+                child: Slider(
+                  value: foregroundOpacity,
+                  min: 0,
+                  max: 1,
+                  onChanged: onForegroundOpacityChanged,
                 ),
               ),
             ],
@@ -492,7 +512,7 @@ class _DeviceSpec {
 }
 
 const _swatches = [
-  Color(0xFFE7F0FF),
+  Color(0xFF090E16),
   Color(0xFF88E0B5),
   Color(0xFFFFD166),
   Color(0xFFFF7A90),
