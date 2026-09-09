@@ -7,7 +7,7 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 - 五区线性布局：`topLeft`、`topRight`、`bottomLeft`、`bottomCenter`、`bottomRight`
 - Xbox 默认 profile：摇杆、D-pad、ABXY、LB/LT/RB/RT、View/Menu/Xbox
 - 普通控件只命中真实按钮区域；浮动跟随摇杆可使用扩大后的隐形触发区
-- 摇杆支持 down/up、`(-1..1, -1..1)` 归一化向量，以及浮动圆心和越界跟随
+- 摇杆支持 down/up、`(-1..1, -1..1)` 归一化向量、浮动圆心、越界跟随和外置八向分区提示
 - 统一事件模型：gamepad、keyboard、mouse、custom 输入都走 `OnscreenGamepadEvent`
 - profile 支持 compact JSON 往返，便于主仓持久化
 - storage-agnostic profile store/controller：主仓可直接接入本地存储、云同步和 host 绑定
@@ -151,7 +151,7 @@ CloudPlayPlus 接入时建议：
 - 用 `label` 绘制按钮文字，不把它当输入语义。
 - 用 `input` 转远端输入协议。
 - 用 `behavior` 描述按钮行为，例如 normal、toggle、fpsFire、wasdStick。
-- 用 `stickMode` 选择摇杆交互：`standard` 为普通响应，`floatingFollow` 会扩大触发区、将按下点作为视觉圆心，并在拖出最大半径后让圆心跟随手指。
+- 用 `stickMode` 选择摇杆交互：`standard` 为普通响应，`floatingFollow` 会扩大触发区、将按下点作为视觉圆心，并在拖出最大半径后让圆心跟随手指。激活时摇杆外沿显示八个留有临界分隔的方向扇区，当前扇区高亮。
 - 保存 `anchor + offset`，不要保存像素坐标。
 
 ### `OnscreenGamepadInput`

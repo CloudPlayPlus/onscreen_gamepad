@@ -617,32 +617,57 @@ class _StickDirectionPainter extends CustomPainter {
     final direction = value / distance;
     final center = size.center(Offset.zero);
     final radius = size.shortestSide / 2;
-    final start = center + direction * radius * 0.18;
-    final end = center + direction * radius * 0.58;
-    final strokeWidth = math.max(2.0, size.shortestSide * 0.026);
-    final paint = Paint()
+    const sectorCount = 8;
+    const sectorSweep = math.pi * 2 / sectorCount;
+    final directionAngle = math.atan2(direction.dy, direction.dx);
+    final activeSector =
+        ((directionAngle + sectorSweep / 2) / sectorSweep).floor() %
+        sectorCount;
+    final ringRadius = radius * 1.08;
+    final ringBounds = Rect.fromCircle(center: center, radius: ringRadius);
+    final gap = math.max(0.055, 5 / ringRadius);
+    final inactivePaint = Paint()
+      ..color = color.withAlpha((color.a * 255 * 0.28).round())
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = math.max(3.0, radius * 0.13);
+    final activePaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..strokeWidth = strokeWidth;
-    canvas.drawLine(start, end, paint);
+      ..strokeWidth = math.max(4.0, radius * 0.21);
 
-    final normal = Offset(-direction.dy, direction.dx);
-    final arrowLength = radius * 0.11;
-    final arrowWidth = radius * 0.08;
-    final arrow = Path()
-      ..moveTo(end.dx, end.dy)
-      ..lineTo(
-        end.dx - direction.dx * arrowLength + normal.dx * arrowWidth,
-        end.dy - direction.dy * arrowLength + normal.dy * arrowWidth,
-      )
-      ..moveTo(end.dx, end.dy)
-      ..lineTo(
-        end.dx - direction.dx * arrowLength - normal.dx * arrowWidth,
-        end.dy - direction.dy * arrowLength - normal.dy * arrowWidth,
+    for (var index = 0; index < sectorCount; index += 1) {
+      final sectorCenter = index * sectorSweep;
+      final startAngle = sectorCenter - sectorSweep / 2 + gap / 2;
+      canvas.drawArc(
+        ringBounds,
+        startAngle,
+        sectorSweep - gap,
+        false,
+        index == activeSector ? activePaint : inactivePaint,
       );
-    canvas.drawPath(arrow, paint);
+    }
+
+    final activeCenter = activeSector * sectorSweep;
+    final boundaryPaint = Paint()
+      ..color = color.withAlpha((color.a * 255 * 0.86).round())
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(1.5, radius * 0.035);
+    for (final boundaryAngle in [
+      activeCenter - sectorSweep / 2,
+      activeCenter + sectorSweep / 2,
+    ]) {
+      final unit = Offset(math.cos(boundaryAngle), math.sin(boundaryAngle));
+      canvas.drawLine(
+        center + unit * radius * 0.78,
+        center + unit * radius * 1.28,
+        boundaryPaint,
+      );
+    }
   }
 
   @override
