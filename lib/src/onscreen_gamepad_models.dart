@@ -10,6 +10,8 @@ enum OnscreenGamepadAnchor {
 
 enum OnscreenGamepadControlKind { circle, square, stick }
 
+enum OnscreenGamepadStickMode { standard, floatingFollow }
+
 enum OnscreenGamepadControlRole {
   primary,
   secondary,
@@ -210,6 +212,7 @@ class OnscreenGamepadControl {
     required this.input,
     this.behavior = OnscreenGamepadControlBehavior.normal,
     this.behaviorConfig = const {},
+    this.stickMode = OnscreenGamepadStickMode.standard,
     this.sizeScale = 1,
     this.color,
     this.sortOrder = 0,
@@ -225,6 +228,7 @@ class OnscreenGamepadControl {
   final OnscreenGamepadInput input;
   final OnscreenGamepadControlBehavior behavior;
   final Map<String, Object?> behaviorConfig;
+  final OnscreenGamepadStickMode stickMode;
   final double sizeScale;
   final Color? color;
   final int sortOrder;
@@ -240,6 +244,7 @@ class OnscreenGamepadControl {
     OnscreenGamepadInput? input,
     OnscreenGamepadControlBehavior? behavior,
     Map<String, Object?>? behaviorConfig,
+    OnscreenGamepadStickMode? stickMode,
     double? sizeScale,
     Color? color,
     int? sortOrder,
@@ -255,6 +260,7 @@ class OnscreenGamepadControl {
       input: input ?? this.input,
       behavior: behavior ?? this.behavior,
       behaviorConfig: behaviorConfig ?? this.behaviorConfig,
+      stickMode: stickMode ?? this.stickMode,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -274,6 +280,7 @@ class OnscreenGamepadControl {
       if (behavior != OnscreenGamepadControlBehavior.normal)
         'bh': behavior.name,
       if (behaviorConfig.isNotEmpty) 'bc': behaviorConfig,
+      if (stickMode != OnscreenGamepadStickMode.standard) 'sm': stickMode.name,
       if (sizeScale != 1) 'z': sizeScale,
       if (color != null) 'co': color!.toARGB32(),
       if (sortOrder != 0) 'so': sortOrder,
@@ -312,6 +319,11 @@ class OnscreenGamepadControl {
         OnscreenGamepadControlBehavior.normal,
       ),
       behaviorConfig: _map(json['bc']),
+      stickMode: _enumByName(
+        OnscreenGamepadStickMode.values,
+        json['sm'],
+        OnscreenGamepadStickMode.standard,
+      ),
       sizeScale: _double(json['z'], 1),
       color: _nullableColor(json['co']),
       sortOrder: _int(json['so'], 0),

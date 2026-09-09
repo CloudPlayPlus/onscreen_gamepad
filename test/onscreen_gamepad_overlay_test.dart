@@ -195,9 +195,9 @@ void main() {
     final events = <OnscreenGamepadEvent>[];
     final profile = kOnscreenGamepadXboxProfile.copyWith(
       controls: [
-        kOnscreenGamepadXboxProfile.controls.firstWhere(
-          (control) => control.id == 'left-stick',
-        ),
+        kOnscreenGamepadXboxProfile.controls
+            .firstWhere((control) => control.id == 'left-stick')
+            .copyWith(stickMode: OnscreenGamepadStickMode.standard),
       ],
     );
 
@@ -229,6 +229,146 @@ void main() {
     expect(stickEvent.value!.dy, closeTo(0, 0.001));
 
     await gesture.up();
+  });
+
+  testWidgets(
+    'floating follow stick expands activation, moves its center, and follows overflow',
+    (tester) async {
+      final events = <OnscreenGamepadEvent>[];
+      final profile = kOnscreenGamepadXboxProfile.copyWith(
+        controls: [
+          kOnscreenGamepadXboxProfile.controls.firstWhere(
+            (control) => control.id == 'left-stick',
+          ),
+        ],
+      );
+      const renderSize = Size(600, 400);
+      final placed = const OnscreenGamepadLayoutEngine()
+          .layout(renderSize: renderSize, profile: profile)
+          .controls
+          .single;
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              key: const ValueKey('floating-stick-canvas'),
+              width: renderSize.width,
+              height: renderSize.height,
+              child: OnscreenGamepadOverlay(
+                profile: profile,
+                onEvent: events.add,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final control = find.byKey(const ValueKey('left-stick'));
+      final activationRect = tester.getRect(control);
+      expect(activationRect.width, greaterThan(placed.hitRect.width));
+      final canvasOrigin = tester.getTopLeft(
+        find.byKey(const ValueKey('floating-stick-canvas')),
+      );
+      final placedHitRect = placed.hitRect.shift(canvasOrigin);
+      final placedCenter = placed.center + canvasOrigin;
+      final start = Offset(placedHitRect.left - 10, placedHitRect.center.dy);
+      expect(
+        activationRect.contains(start),
+        isTrue,
+        reason:
+            'activation=$activationRect hit=$placedHitRect canvas=$canvasOrigin start=$start',
+      );
+      expect(placedHitRect.contains(start), isFalse);
+
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+
+      final visual = find.byKey(const ValueKey('stick.visual.left-stick'));
+      expect(tester.getCenter(visual).dx, closeTo(start.dx, 0.01));
+      expect(tester.getCenter(visual).dy, closeTo(start.dy, 0.01));
+
+      final dragPosition = start + Offset(placed.hitSize * 1.4, 0);
+      await gesture.moveTo(dragPosition);
+      await tester.pump();
+
+      final changes = events
+          .where((event) => event.phase == OnscreenGamepadEventPhase.change)
+          .toList();
+      expect(changes.last.value!.dx, closeTo(1, 0.001));
+      expect(changes.last.value!.dy, closeTo(0, 0.001));
+      expect(
+        tester.getCenter(visual).dx,
+        closeTo(dragPosition.dx - placed.hitSize / 2, 0.01),
+      );
+      expect(
+        find.byKey(const ValueKey('stick.direction.left-stick')),
+        findsOneWidget,
+      );
+
+      await gesture.up();
+      await tester.pump();
+
+      expect(tester.getCenter(visual).dx, closeTo(placedCenter.dx, 0.01));
+      expect(tester.getCenter(visual).dy, closeTo(placedCenter.dy, 0.01));
+      expect(
+        events
+            .lastWhere(
+              (event) => event.phase == OnscreenGamepadEventPhase.change,
+            )
+            .value,
+        Offset.zero,
+      );
+    },
+  );
+
+  testWidgets('a top button wins over the expanded stick activation area', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    final leftStick = kOnscreenGamepadXboxProfile.controls.firstWhere(
+      (control) => control.id == 'left-stick',
+    );
+    final profile = kOnscreenGamepadXboxProfile.copyWith(
+      controls: [
+        leftStick.copyWith(
+          anchor: OnscreenGamepadAnchor.bottomCenter,
+          offset: Offset.zero,
+          sortOrder: 10,
+        ),
+        const OnscreenGamepadControl(
+          id: 'top-button',
+          label: 'A',
+          anchor: OnscreenGamepadAnchor.bottomCenter,
+          offset: Offset.zero,
+          kind: OnscreenGamepadControlKind.circle,
+          role: OnscreenGamepadControlRole.primary,
+          sizeTier: OnscreenGamepadSizeTier.medium,
+          input: OnscreenGamepadInput.gamepadButton('a'),
+          sortOrder: 20,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 600,
+          height: 400,
+          child: OnscreenGamepadOverlay(profile: profile, onEvent: events.add),
+        ),
+      ),
+    );
+
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const ValueKey('top-button'))),
+    );
+
+    expect(events, isNotEmpty);
+    expect(events.every((event) => event.control.id == 'top-button'), isTrue);
   });
 
   testWidgets('quick gamepad stick taps emit the stick button', (tester) async {

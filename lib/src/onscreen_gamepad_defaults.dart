@@ -23,6 +23,7 @@ const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
         yAxis: 'leftY',
         buttonCode: 'leftStickButton',
       ),
+      stickMode: OnscreenGamepadStickMode.floatingFollow,
       sortOrder: 10,
     ),
     OnscreenGamepadControl(

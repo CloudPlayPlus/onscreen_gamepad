@@ -6,8 +6,8 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 
 - 五区线性布局：`topLeft`、`topRight`、`bottomLeft`、`bottomCenter`、`bottomRight`
 - Xbox 默认 profile：摇杆、D-pad、ABXY、LB/LT/RB/RT、View/Menu/Xbox
-- 只命中真实按钮区域，overlay 空白区域不拦截下方视频触摸
-- 摇杆支持 down/up 和 `(-1..1, -1..1)` 归一化拖动向量
+- 普通控件只命中真实按钮区域；浮动跟随摇杆可使用扩大后的隐形触发区
+- 摇杆支持 down/up、`(-1..1, -1..1)` 归一化向量，以及浮动圆心和越界跟随
 - 统一事件模型：gamepad、keyboard、mouse、custom 输入都走 `OnscreenGamepadEvent`
 - profile 支持 compact JSON 往返，便于主仓持久化
 - storage-agnostic profile store/controller：主仓可直接接入本地存储、云同步和 host 绑定
@@ -48,7 +48,7 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 ## 最小接入
 
-把 overlay 放在串流视频层上方即可。`OnscreenGamepadOverlay` 自身是透明 hit test 结构，只有每个按钮的 hit rect 会接收 pointer，空白处会继续落到下层视频。
+把 overlay 放在串流视频层上方即可。`OnscreenGamepadOverlay` 自身是透明 hit test 结构，普通控件只有自己的 hit rect 接收 pointer；`floatingFollow` 摇杆使用 `1.8x` 的隐形触发区，其他空白处继续落到下层视频。重叠时，视觉上层的具体按钮优先命中。
 
 ```dart
 Stack(
@@ -140,6 +140,7 @@ const OnscreenGamepadControl(
   sizeTier: OnscreenGamepadSizeTier.medium,
   input: OnscreenGamepadInput.gamepadButton('a'),
   behavior: OnscreenGamepadControlBehavior.normal,
+  stickMode: OnscreenGamepadStickMode.standard,
   sizeScale: 1,
 )
 ```
@@ -150,6 +151,7 @@ CloudPlayPlus 接入时建议：
 - 用 `label` 绘制按钮文字，不把它当输入语义。
 - 用 `input` 转远端输入协议。
 - 用 `behavior` 描述按钮行为，例如 normal、toggle、fpsFire、wasdStick。
+- 用 `stickMode` 选择摇杆交互：`standard` 为普通响应，`floatingFollow` 会扩大触发区、将按下点作为视觉圆心，并在拖出最大半径后让圆心跟随手指。
 - 保存 `anchor + offset`，不要保存像素坐标。
 
 ### `OnscreenGamepadInput`

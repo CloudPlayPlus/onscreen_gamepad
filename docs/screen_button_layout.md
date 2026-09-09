@@ -26,6 +26,7 @@ sizeScale: 用户自由缩放倍率，默认 1.0
 color: 可选；未设置时使用 profile.defaultColor
 input: 输入语义，例如 gamepadButton(a) 或 gamepadStick(leftX, leftY, leftStickButton)
 behavior: 控件行为，例如 normal、toggle、fpsFire、wasdStick
+stickMode: standard | floatingFollow，仅对摇杆生效
 ```
 
 Profile 视觉字段：
@@ -156,7 +157,8 @@ visualSize = round(hitSize * 0.82)
 - 普通按钮：pointer down 触发按键 down，pointer up/cancel 触发按键 up。
 - Toggle 按钮：每次 pointer down 在 down/up 两个状态间切换，pointer up 只结束本次触摸，不自动释放远端按键。
 - FPS 开火按钮：按住时先输出按钮 down，随后手指移动会按 delta 输出 `mouseMove` 事件，松开时输出按钮 up。
-- 摇杆按钮：pointer down 也触发 `LS/RS down`；如果用户继续拖动，则按 pointer 相对摇杆 hit rect 中心的位置输出 `(-1..1, -1..1)` 的归一化向量；pointer up/cancel 时先回零，再触发 `LS/RS up`。
-- 摇杆不额外扩大 overlay 命中层，只有自己的 hit rect 捕获触摸；hit rect 外仍然透传给视频。
+- `standard` 摇杆：pointer down 也触发 `LS/RS down`；首次按下点作为输入零点，拖动输出 `(-1..1, -1..1)` 的归一化向量；pointer up/cancel 时先回零，再触发 `LS/RS up`。
+- `floatingFollow` 摇杆：视觉尺寸不变，隐形触发区扩大为标准 hit rect 直径的 `1.8` 倍。按下点同时成为输入零点和视觉圆心；拖出最大输入半径后，输出保持满量程，圆心沿拖动方向跟随手指。激活时绘制停在摇杆帽以内的短方向标记，抬手后视觉圆心复位。
+- 扩大触发区只作用于明确配置为 `floatingFollow` 的摇杆；重叠区域由 Stack 中视觉上层的具体按钮优先命中，其他空白仍透传给视频。
 
 CloudPlayPlus 接入时建议只依赖 `control.input`，不要依赖 label。`id` 用于 profile 编辑和 active state，`label` 只用于显示。

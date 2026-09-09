@@ -8,6 +8,7 @@ import 'onscreen_gamepad_models.dart';
 
 const _kStickTapThresholdRatio = 0.01;
 const _kStickTapButtonDelay = Duration(milliseconds: 32);
+const _kFloatingStickActivationScale = 1.8;
 
 typedef OnscreenGamepadControlEvent =
     void Function(OnscreenGamepadControl control);
@@ -63,10 +64,14 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                 ),
             for (final placed in result.controls)
               Positioned.fromRect(
-                rect: placed.hitRect,
+                rect: _interactionRectFor(placed, result.renderSize),
                 child: _ControlButton(
                   key: ValueKey(placed.control.id),
                   placed: placed,
+                  interactionRect: _interactionRectFor(
+                    placed,
+                    result.renderSize,
+                  ),
                   profile: profile,
                   isActive: activeControlIds.contains(placed.control.id),
                   onEvent: onEvent,
@@ -86,6 +91,7 @@ class _ControlButton extends StatefulWidget {
   const _ControlButton({
     super.key,
     required this.placed,
+    required this.interactionRect,
     required this.profile,
     required this.isActive,
     this.onEvent,
@@ -95,6 +101,7 @@ class _ControlButton extends StatefulWidget {
   });
 
   final OnscreenGamepadPlacedControl placed;
+  final Rect interactionRect;
   final OnscreenGamepadProfile profile;
   final bool isActive;
   final OnscreenGamepadEventCallback? onEvent;
@@ -110,6 +117,7 @@ class _ControlButtonState extends State<_ControlButton> {
   int? _activePointer;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
+  Offset? _stickVisualCenter;
   bool _stickTapCandidate = false;
   Offset? _lastPointerPosition;
   bool _isToggled = false;
@@ -118,10 +126,12 @@ class _ControlButtonState extends State<_ControlButton> {
   @override
   void didUpdateWidget(covariant _ControlButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.placed.control.id != widget.placed.control.id) {
+    if (oldWidget.placed.control.id != widget.placed.control.id ||
+        oldWidget.placed.control.stickMode != widget.placed.control.stickMode) {
       _activePointer = null;
       _stickValue = Offset.zero;
       _stickOrigin = null;
+      _stickVisualCenter = null;
       _stickTapCandidate = false;
       _lastPointerPosition = null;
       _isToggled = false;
@@ -145,6 +155,11 @@ class _ControlButtonState extends State<_ControlButton> {
       _bestTextColor(backgroundColor),
       widget.profile.foregroundOpacity,
     );
+    final defaultVisualCenter =
+        widget.placed.center - widget.interactionRect.topLeft;
+    final visualCenter = _usesFloatingFollow(control) && _activePointer != null
+        ? _stickVisualCenter ?? defaultVisualCenter
+        : defaultVisualCenter;
 
     return Listener(
       behavior: HitTestBehavior.opaque,
@@ -152,15 +167,28 @@ class _ControlButtonState extends State<_ControlButton> {
       onPointerMove: _handlePointerMove,
       onPointerUp: _handlePointerUp,
       onPointerCancel: _handlePointerCancel,
-      child: Center(
-        child: _ControlVisual(
-          control: control,
-          fillColor: fillColor,
-          foreground: foreground,
-          size: widget.placed.visualSize,
-          isActive: isActive,
-          stickValue: _stickValue,
-        ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: visualCenter.dx - widget.placed.visualSize / 2,
+            top: visualCenter.dy - widget.placed.visualSize / 2,
+            child: SizedBox.square(
+              key: ValueKey('stick.visual.${control.id}'),
+              dimension: widget.placed.visualSize,
+              child: _ControlVisual(
+                control: control,
+                fillColor: fillColor,
+                foreground: foreground,
+                size: widget.placed.visualSize,
+                isActive: isActive,
+                stickValue: _stickValue,
+                showStickDirection:
+                    _usesFloatingFollow(control) && _activePointer != null,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -221,6 +249,7 @@ class _ControlButtonState extends State<_ControlButton> {
       setState(() {
         _activePointer = null;
         _stickOrigin = null;
+        _stickVisualCenter = null;
         _stickTapCandidate = false;
         _lastPointerPosition = null;
       });
@@ -230,6 +259,7 @@ class _ControlButtonState extends State<_ControlButton> {
       setState(() {
         _activePointer = null;
         _stickOrigin = null;
+        _stickVisualCenter = null;
         _stickTapCandidate = false;
         _lastPointerPosition = null;
       });
@@ -247,22 +277,41 @@ class _ControlButtonState extends State<_ControlButton> {
     setState(() {
       _activePointer = null;
       _stickOrigin = null;
+      _stickVisualCenter = null;
       _stickTapCandidate = false;
       _lastPointerPosition = null;
     });
   }
 
   void _beginStick(Offset localPosition) {
-    _stickOrigin = localPosition;
-    _stickTapCandidate = true;
-    _setStickValue(Offset.zero);
+    setState(() {
+      _stickOrigin = localPosition;
+      _stickVisualCenter = _usesFloatingFollow(widget.placed.control)
+          ? localPosition
+          : null;
+      _stickTapCandidate = true;
+      _stickValue = Offset.zero;
+    });
   }
 
   void _updateStick(Offset localPosition) {
-    final half = widget.placed.hitSize / 2;
-    final origin = _stickOrigin ?? Offset(half, half);
-    final delta = localPosition - origin;
-    final raw = delta / half;
+    final radius = widget.placed.hitSize / 2;
+    var origin =
+        _stickOrigin ?? widget.placed.center - widget.interactionRect.topLeft;
+    var delta = localPosition - origin;
+    final dragDistance = delta.distance;
+    if (_usesFloatingFollow(widget.placed.control) &&
+        dragDistance > radius &&
+        dragDistance > 0) {
+      final direction = delta / dragDistance;
+      origin = localPosition - direction * radius;
+      delta = localPosition - origin;
+      setState(() {
+        _stickOrigin = origin;
+        _stickVisualCenter = origin;
+      });
+    }
+    final raw = delta / radius;
     final distance = raw.distance;
     if (distance > _kStickTapThresholdRatio) {
       _stickTapCandidate = false;
@@ -409,6 +458,11 @@ class _ControlButtonState extends State<_ControlButton> {
   bool _isStick(OnscreenGamepadControl control) {
     return control.kind == OnscreenGamepadControlKind.stick;
   }
+
+  bool _usesFloatingFollow(OnscreenGamepadControl control) {
+    return _isStick(control) &&
+        control.stickMode == OnscreenGamepadStickMode.floatingFollow;
+  }
 }
 
 class _ControlVisual extends StatelessWidget {
@@ -419,6 +473,7 @@ class _ControlVisual extends StatelessWidget {
     required this.size,
     required this.isActive,
     required this.stickValue,
+    required this.showStickDirection,
   });
 
   final OnscreenGamepadControl control;
@@ -427,6 +482,7 @@ class _ControlVisual extends StatelessWidget {
   final double size;
   final bool isActive;
   final Offset stickValue;
+  final bool showStickDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -463,6 +519,8 @@ class _ControlVisual extends StatelessWidget {
                   size: size,
                   label: control.label,
                   value: stickValue,
+                  showDirection: showStickDirection,
+                  directionKey: ValueKey('stick.direction.${control.id}'),
                 )
               : Center(
                   child: Text(
@@ -490,12 +548,16 @@ class _StickFace extends StatelessWidget {
     required this.size,
     required this.label,
     required this.value,
+    required this.showDirection,
+    required this.directionKey,
   });
 
   final Color color;
   final double size;
   final String label;
   final Offset value;
+  final bool showDirection;
+  final Key directionKey;
 
   @override
   Widget build(BuildContext context) {
@@ -518,6 +580,15 @@ class _StickFace extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
+          if (showDirection && value.distance > 0.08)
+            Positioned.fill(
+              key: directionKey,
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _StickDirectionPainter(color: color, value: value),
+                ),
+              ),
+            ),
           Transform.translate(
             offset: Offset(value.dx * maxTravel, value.dy * maxTravel),
             child: DecoratedBox(
@@ -528,6 +599,55 @@ class _StickFace extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _StickDirectionPainter extends CustomPainter {
+  const _StickDirectionPainter({required this.color, required this.value});
+
+  final Color color;
+  final Offset value;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final distance = value.distance;
+    if (distance <= 0) {
+      return;
+    }
+    final direction = value / distance;
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2;
+    final start = center + direction * radius * 0.18;
+    final end = center + direction * radius * 0.58;
+    final strokeWidth = math.max(2.0, size.shortestSide * 0.026);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = strokeWidth;
+    canvas.drawLine(start, end, paint);
+
+    final normal = Offset(-direction.dy, direction.dx);
+    final arrowLength = radius * 0.11;
+    final arrowWidth = radius * 0.08;
+    final arrow = Path()
+      ..moveTo(end.dx, end.dy)
+      ..lineTo(
+        end.dx - direction.dx * arrowLength + normal.dx * arrowWidth,
+        end.dy - direction.dy * arrowLength + normal.dy * arrowWidth,
+      )
+      ..moveTo(end.dx, end.dy)
+      ..lineTo(
+        end.dx - direction.dx * arrowLength - normal.dx * arrowWidth,
+        end.dy - direction.dy * arrowLength - normal.dy * arrowWidth,
+      );
+    canvas.drawPath(arrow, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _StickDirectionPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.value != value;
   }
 }
 
@@ -563,4 +683,17 @@ Color _bestTextColor(Color color) {
 
 Color _withOpacity(Color color, double opacity) {
   return color.withAlpha((opacity.clamp(0, 1) * 255).round());
+}
+
+Rect _interactionRectFor(OnscreenGamepadPlacedControl placed, Size renderSize) {
+  if (placed.control.kind != OnscreenGamepadControlKind.stick ||
+      placed.control.stickMode != OnscreenGamepadStickMode.floatingFollow) {
+    return placed.hitRect;
+  }
+  final expanded = Rect.fromCenter(
+    center: placed.center,
+    width: placed.hitSize * _kFloatingStickActivationScale,
+    height: placed.hitSize * _kFloatingStickActivationScale,
+  );
+  return expanded.intersect(Offset.zero & renderSize);
 }

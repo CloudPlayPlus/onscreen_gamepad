@@ -2,3 +2,4 @@
 
 * Add adaptive onscreen gamepad layout models, Xbox default profile, overlay widget, and demo app.
 * Separate background and foreground opacity, allow both to reach zero, and remove control outlines.
+* Add an opt-in floating-follow stick mode with a larger activation area, moving visual origin, overflow center follow, and direction cue.

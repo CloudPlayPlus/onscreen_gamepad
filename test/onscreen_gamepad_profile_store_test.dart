@@ -6,6 +6,14 @@ void main() {
     expect(kOnscreenGamepadXboxProfile.defaultColor.toARGB32(), 0xFF090E16);
     expect(kOnscreenGamepadXboxProfile.backgroundOpacity, 0.36);
     expect(kOnscreenGamepadXboxProfile.foregroundOpacity, 0.60);
+    final leftStick = kOnscreenGamepadXboxProfile.controls.firstWhere(
+      (control) => control.id == 'left-stick',
+    );
+    final rightStick = kOnscreenGamepadXboxProfile.controls.firstWhere(
+      (control) => control.id == 'right-stick',
+    );
+    expect(leftStick.stickMode, OnscreenGamepadStickMode.floatingFollow);
+    expect(rightStick.stickMode, OnscreenGamepadStickMode.standard);
   });
 
   test('profile store json keeps active profile and profiles', () {
@@ -103,5 +111,15 @@ void main() {
     expect(restored.behavior, OnscreenGamepadControlBehavior.fpsFire);
     expect(restored.behaviorConfig['sensitivity'], 1.4);
     expect(restored.behaviorConfig['threshold'], 0.6);
+  });
+
+  test('floating follow stick mode survives json roundtrip', () {
+    final control = kOnscreenGamepadXboxProfile.controls.firstWhere(
+      (item) => item.id == 'left-stick',
+    );
+
+    final restored = OnscreenGamepadControl.fromJson(control.toJson());
+
+    expect(restored.stickMode, OnscreenGamepadStickMode.floatingFollow);
   });
 }
