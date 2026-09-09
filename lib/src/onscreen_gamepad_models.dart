@@ -324,29 +324,33 @@ class OnscreenGamepadProfile {
     required this.id,
     required this.name,
     required this.controls,
-    this.defaultColor = const Color(0xFFE7F0FF),
-    this.opacity = 0.72,
+    this.defaultColor = const Color(0xFF090E16),
+    this.backgroundOpacity = 0.36,
+    this.foregroundOpacity = 0.60,
   });
 
   final String id;
   final String name;
   final List<OnscreenGamepadControl> controls;
   final Color defaultColor;
-  final double opacity;
+  final double backgroundOpacity;
+  final double foregroundOpacity;
 
   OnscreenGamepadProfile copyWith({
     String? id,
     String? name,
     List<OnscreenGamepadControl>? controls,
     Color? defaultColor,
-    double? opacity,
+    double? backgroundOpacity,
+    double? foregroundOpacity,
   }) {
     return OnscreenGamepadProfile(
       id: id ?? this.id,
       name: name ?? this.name,
       controls: controls ?? this.controls,
       defaultColor: defaultColor ?? this.defaultColor,
-      opacity: opacity ?? this.opacity,
+      backgroundOpacity: backgroundOpacity ?? this.backgroundOpacity,
+      foregroundOpacity: foregroundOpacity ?? this.foregroundOpacity,
     );
   }
 
@@ -355,7 +359,8 @@ class OnscreenGamepadProfile {
       'id': id,
       'n': name,
       'dc': defaultColor.toARGB32(),
-      'op': opacity,
+      'bo': backgroundOpacity,
+      'fo': foregroundOpacity,
       'b': controls.map((control) => control.toJson()).toList(),
     };
   }
@@ -364,8 +369,9 @@ class OnscreenGamepadProfile {
     return OnscreenGamepadProfile(
       id: _string(json['id'], ''),
       name: _string(json['n'], ''),
-      defaultColor: _color(json['dc'], const Color(0xFFE7F0FF)),
-      opacity: _double(json['op'], 0.72),
+      defaultColor: _color(json['dc'], const Color(0xFF090E16)),
+      backgroundOpacity: _double(json['bo'], 0.36),
+      foregroundOpacity: _double(json['fo'], 0.60),
       controls: _list(json['b'])
           .whereType<Map>()
           .map((item) => OnscreenGamepadControl.fromJson(_map(item)))

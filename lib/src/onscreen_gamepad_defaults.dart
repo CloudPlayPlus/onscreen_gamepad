@@ -5,8 +5,9 @@ import 'onscreen_gamepad_models.dart';
 const kOnscreenGamepadXboxProfile = OnscreenGamepadProfile(
   id: 'xbox-default',
   name: 'Xbox Default',
-  defaultColor: Color(0xFFE7F0FF),
-  opacity: 0.72,
+  defaultColor: Color(0xFF090E16),
+  backgroundOpacity: 0.36,
+  foregroundOpacity: 0.60,
   controls: [
     OnscreenGamepadControl(
       id: 'left-stick',

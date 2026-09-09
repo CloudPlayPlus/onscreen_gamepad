@@ -2,6 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 void main() {
+  test('default profile uses the approved visual opacity values', () {
+    expect(kOnscreenGamepadXboxProfile.defaultColor.toARGB32(), 0xFF090E16);
+    expect(kOnscreenGamepadXboxProfile.backgroundOpacity, 0.36);
+    expect(kOnscreenGamepadXboxProfile.foregroundOpacity, 0.60);
+  });
+
   test('profile store json keeps active profile and profiles', () {
     final store = OnscreenGamepadProfileStore(
       activeProfileId: 'custom',
@@ -10,7 +16,8 @@ void main() {
         kOnscreenGamepadXboxProfile.copyWith(
           id: 'custom',
           name: 'Custom',
-          opacity: 0.5,
+          backgroundOpacity: 0,
+          foregroundOpacity: 0,
         ),
       ],
     );
@@ -20,6 +27,8 @@ void main() {
     expect(restored.version, kOnscreenGamepadProfileStoreVersion);
     expect(restored.activeProfileId, 'custom');
     expect(restored.activeProfile?.name, 'Custom');
+    expect(restored.activeProfile?.backgroundOpacity, 0);
+    expect(restored.activeProfile?.foregroundOpacity, 0);
     expect(restored.profiles.length, 2);
   });
 

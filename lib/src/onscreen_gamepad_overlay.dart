@@ -131,17 +131,20 @@ class _ControlButtonState extends State<_ControlButton> {
   @override
   Widget build(BuildContext context) {
     final control = widget.placed.control;
-    final color = _withOpacity(
-      control.color ?? widget.profile.defaultColor,
-      widget.profile.opacity,
-    );
-    final activeColor = Color.alphaBlend(
+    final backgroundColor = control.color ?? widget.profile.defaultColor;
+    final backgroundOpacity = widget.profile.backgroundOpacity;
+    final color = _withOpacity(backgroundColor, backgroundOpacity);
+    final activeBaseColor = Color.alphaBlend(
       _withOpacity(Colors.white, 0.22),
-      color,
+      backgroundColor.withAlpha(255),
     );
+    final activeColor = _withOpacity(activeBaseColor, backgroundOpacity);
     final isActive = widget.isActive || _activePointer != null || _isToggled;
     final fillColor = isActive ? activeColor : color;
-    final foreground = _bestTextColor(fillColor);
+    final foreground = _withOpacity(
+      _bestTextColor(backgroundColor),
+      widget.profile.foregroundOpacity,
+    );
 
     return Listener(
       behavior: HitTestBehavior.opaque,
@@ -444,13 +447,9 @@ class _ControlVisual extends StatelessWidget {
           shape: shape,
           borderRadius: borderRadius,
           color: fillColor,
-          border: Border.all(
-            color: _withOpacity(Colors.white, isActive ? 0.72 : 0.38),
-            width: math.max(1.0, size * 0.035),
-          ),
           boxShadow: [
             BoxShadow(
-              color: _withOpacity(Colors.black, 0.22),
+              color: _withOpacity(Colors.black, 0.40),
               blurRadius: size * 0.18,
               offset: Offset(0, size * 0.05),
             ),
@@ -501,8 +500,8 @@ class _StickFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final knobSize = size * 0.22;
-    final outerBorder = math.max(1.0, size * 0.035);
-    final maxTravel = math.max(0.0, size / 2 - outerBorder);
+    final edgeInset = math.max(1.0, size * 0.035);
+    final maxTravel = math.max(0.0, size / 2 - edgeInset);
 
     return SizedBox.square(
       dimension: size,
@@ -513,7 +512,7 @@ class _StickFace extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: _withOpacity(color, 0.44),
+              color: color,
               fontSize: math.max(10, size * 0.16),
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
@@ -522,14 +521,7 @@ class _StickFace extends StatelessWidget {
           Transform.translate(
             offset: Offset(value.dx * maxTravel, value.dy * maxTravel),
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _withOpacity(color, 0.48),
-                border: Border.all(
-                  color: _withOpacity(color, 0.18),
-                  width: math.max(1.0, size * 0.018),
-                ),
-              ),
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
               child: SizedBox.square(dimension: knobSize),
             ),
           ),
