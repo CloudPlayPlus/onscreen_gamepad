@@ -6,8 +6,8 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 
 - 五区线性布局：`topLeft`、`topRight`、`bottomLeft`、`bottomCenter`、`bottomRight`
 - Xbox 默认 profile：摇杆、D-pad、ABXY、LB/LT/RB/RT、View/Menu/Xbox
-- 只命中真实按钮区域，overlay 空白区域不拦截下方视频触摸
-- 摇杆支持 down/up 和 `(-1..1, -1..1)` 归一化拖动向量
+- 移动摇杆默认开启大范围起手，可关闭区域触发以仅在原命中框起手；其他屏幕按钮和其他摇杆原命中框优先，有效范围外不拦截下方视频触摸
+- 摇杆可选择以落点或原布局摇杆位置为中心；落点模式仅显示原半月，原布局中心模式可切换为固定位置的“半月＋触点”提示（左摇杆和 WASD 默认开启、右摇杆关闭），两种半月互斥显示。支持 down/up 和长度不超过 1 的归一化拖动向量
 - 统一事件模型：gamepad、keyboard、mouse、custom 输入都走 `OnscreenGamepadEvent`
 - profile 支持 compact JSON 往返，便于主仓持久化
 - storage-agnostic profile store/controller：主仓可直接接入本地存储、云同步和 host 绑定
@@ -48,7 +48,11 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 ## 最小接入
 
-把 overlay 放在串流视频层上方即可。`OnscreenGamepadOverlay` 自身是透明 hit test 结构，只有每个按钮的 hit rect 会接收 pointer，空白处会继续落到下层视频。
+把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆默认还接收所在完整半屏的空白区域，设置 `regionTrigger: false` 后仅在原命中框起手。右摇杆可切为 `stickMode: OnscreenGamepadStickMode.camera`，强制半屏鼠标视角转动，本体仅作 R3；`mouseSensitivity` 调整倍率。移动摇杆的 `autoRun` 默认开启，向上推至奔跑提示附近松手锁定，再次触碰解除。所有有效起手范围之外继续落到下层视频。
+
+鼠标倍率默认 10，范围 1–50。视角 R3 使用普通中号圆形按钮基准，所有控件大小倍率下限 25%。普通按键及视角 R3 可用 `buttonPressMode` 选择 `normal`、`toggle`、`longPressToggle` 或 `slideHold`：普通按压、点击锁定、满半秒松手锁定、滑过按钮后一起按住并随抬指释放。长按仅比较事件时间戳；锁定再点释放，失焦/卸载释放全部持有输入。
+
+`buttonIcon`（JSON `ic`）默认 `text`，也可选择 `runWalk`、`jump`、`crouch`、`prone`、`attack`、`parry`、`grapple`、`dart`、`interact`、`medicine`、`menu`、`backpack`、`shoot`、`reload`、`aim`。人物和动作朝左，射击为左上子弹，换弹为缩小子弹配左下/右上弯箭头；防御是盾牌，钩子是左上抓钩，飞镖为四刃，交互为人脸加对话气泡。内置轻量矢量图案继承前景透明度和尺寸，保持原文字名称与绑定。`runWalk` 在实际按住、锁定或滑动持有时显示奔跑，释放时显示行走。
 
 ```dart
 Stack(
@@ -101,8 +105,7 @@ OnscreenGamepadOverlay({
 - `showZones`：调试用，显示五个 anchor 区域。
 - `activeControlIds`：外部受控高亮状态。
 - `onEvent`：统一输入事件回调，推荐主仓优先接入。
-- `onControlDown`：所有控件 pointer down 都会触发，包括摇杆。
-- `onControlUp`：pointer up/cancel 触发。摇杆会先发送回零，再触发 up。
+- `onControlDown` / `onControlUp`：控件实际按下/释放时触发，包括视角 R3；锁定模式在解锁时才 up，滑动连按在最后一个持有者释放时 up，空白处转视角不触发这两个回调。普通摇杆释放时先回零再 up。
 - `onStickChanged`：仅摇杆触发，`Offset.dx/dy` 范围是 `-1..1`，屏幕向右/向下为正。
 
 ### `OnscreenGamepadProfile`
@@ -111,9 +114,9 @@ OnscreenGamepadOverlay({
 const profile = OnscreenGamepadProfile(
   id: 'xbox-default',
   name: 'Xbox Default',
-  defaultColor: Color(0xFF090E16),
-  backgroundOpacity: 0.36,
-  foregroundOpacity: 0.60,
+  defaultColor: Color(0xFF000000),
+  backgroundOpacity: 0.12,
+  foregroundOpacity: 0.48,
   controls: [...],
 );
 ```
@@ -204,7 +207,7 @@ void sendStick(OnscreenGamepadInput input, Offset value) {
 
 ### `OnscreenGamepadEvent`
 
-新接入建议从 `onEvent` 转输入协议：
+新接入建议从 `onEvent` 转输入协议。摇杆的无 `value` 阶段只描述手势生命周期，不能根据配置中的 `buttonCode` 发送 L3/R3；实际摇杆轻点按钮由单独的 `gamepadButton` 事件输出，扩大区域起手不会输出该轻点：
 
 ```dart
 void sendInputEvent(OnscreenGamepadEvent event) {
@@ -216,8 +219,6 @@ void sendInputEvent(OnscreenGamepadEvent event) {
       if (value != null) {
         gamepadSender.sendAxis(event.input.xAxis!, value.dx);
         gamepadSender.sendAxis(event.input.yAxis!, value.dy);
-      } else if (event.input.buttonCode != null) {
-        gamepadSender.sendButton(event.input.buttonCode!, pressed: event.isDown);
       }
     case OnscreenGamepadEventType.keyboardKey:
       keyboardSender.sendKey(event.input.numericCode, pressed: event.isDown);

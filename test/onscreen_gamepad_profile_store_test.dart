@@ -3,9 +3,9 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 void main() {
   test('default profile uses the approved visual opacity values', () {
-    expect(kOnscreenGamepadXboxProfile.defaultColor.toARGB32(), 0xFF090E16);
-    expect(kOnscreenGamepadXboxProfile.backgroundOpacity, 0.36);
-    expect(kOnscreenGamepadXboxProfile.foregroundOpacity, 0.60);
+    expect(kOnscreenGamepadXboxProfile.defaultColor.toARGB32(), 0xFF000000);
+    expect(kOnscreenGamepadXboxProfile.backgroundOpacity, 0.12);
+    expect(kOnscreenGamepadXboxProfile.foregroundOpacity, 0.48);
   });
 
   test('profile store json keeps active profile and profiles', () {

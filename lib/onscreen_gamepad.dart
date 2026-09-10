@@ -1,6 +1,7 @@
 import 'onscreen_gamepad_platform_interface.dart';
 
 export 'src/onscreen_gamepad_defaults.dart';
+export 'src/onscreen_gamepad_button_symbol.dart';
 export 'src/onscreen_gamepad_events.dart';
 export 'src/onscreen_gamepad_layout.dart';
 export 'src/onscreen_gamepad_models.dart';
