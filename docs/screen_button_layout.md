@@ -9,7 +9,7 @@
 - 区域随屏幕宽高线性变化，避免窗口轻微缩放时分区跳变。
 - 用户移动按钮时保存相对 anchor 的 offset；换设备或旋转后保持“在同一手区里的相对姿态”。
 - 按钮默认大小不区分 phone/tablet，只由屏幕最短边连续计算；用户可以在小/中/大三档之外继续用自由缩放微调。
-- 触摸命中只落在实际按钮 hit rect 上，按钮之外的 overlay 区域应透传给下方视频或其它手势层。
+- 普通按钮与关闭区域触发的摇杆只在原 hit rect 起手；开启区域触发的移动摇杆还接收所在半屏底部 72% 的空白处。所有有效起手范围之外的触摸透传给下方视频或其它手势层，命中优先级见“摇杆触摸与半月反馈”。
 
 ## 输入坐标
 
@@ -133,7 +133,7 @@ visualSize = round(hitSize * 0.82)
 - `positionFeedbackLocation` 为可选归一化屏幕坐标，存为 `fp`，由编辑器拖动更新。未设置时从原摇杆中心向屏幕中间平移 0.9 倍底盘尺寸、向上 1.4 倍，边界保留半月半径加 8 dp。`OnscreenGamepadPlacedControl.positionFeedbackCenter` 为绘制和编辑器共用的定位规则。串流中提示不拦截触摸。
 - 额外提示为“半月＋小点”：半月中心固定在屏幕上的配置位置，只随方向旋转；小点中心 = 提示中心 + 实际触点 - 本次摇杆中心，显示原始相对位移。额外半月与原半月同尺寸同方向，小点直径 6 dp、带深色边框。半月中心不随落点或力度移动，满力度后小点仍跟随拖动。提示仅在原摇杆中心模式生效且与原半月互斥，不改变输入；死区内与松手时均隐藏反馈，不显示圆弧、箭头或数字。
 - pointer 独占一次手势，多指可同时移动与按键；抬手、取消、应用失去前台或尺寸变化均归零。
-- 原摇杆命中框内的轻点保留 L3/R3 语义；扩大区域内的轻点仅建立中心，不触发 L3。
+- 原摇杆命中框内的轻点保留 L3/R3 语义；扩大区域内的轻点按所选中心模式处理摇杆输入，不触发 L3。
 
 ## Xbox 默认控件
 
@@ -162,7 +162,7 @@ visualSize = round(hitSize * 0.82)
 - 二阶段再做云同步：profile 结构应保持精简，避免存储像素坐标。
 - 三阶段再做 host 绑定：同一用户可为不同 host 使用不同 profile。
 - 暂不支持连发，但 `control.id` 和按键事件接口需要保留扩展空间。
-- 堆叠逼近算法暂不进入当前方案；当前版本只保证命中层按按钮 hit rect 精准响应，空白区域透传。
+- 堆叠逼近算法暂不进入当前方案；当前版本按原 hit rect 和可选的摇杆扩大区域命中，范围外透传。
 - 插件层提供 `OnscreenGamepadProfileStore` 和 `OnscreenGamepadProfileController` 作为 profile CRUD 基础；实际持久化、云同步和 host 绑定仍由 CloudPlayPlus 主仓决定。
 - 输入事件优先走统一 `OnscreenGamepadEvent`：按钮、摇杆、键盘、鼠标和 custom 事件都在这一层收敛，再由主仓转换成串流输入协议。
 
@@ -171,7 +171,7 @@ visualSize = round(hitSize * 0.82)
 - 普通按钮：pointer down 触发按键 down，pointer up/cancel 触发按键 up。
 - Toggle 按钮：每次 pointer down 在 down/up 两个状态间切换，pointer up 只结束本次触摸，不自动释放远端按键。
 - FPS 开火按钮：按住时先输出按钮 down，随后手指移动会按 delta 输出 `mouseMove` 事件，松开时输出按钮 up。
-- 摇杆按钮：pointer down 也触发 `LS/RS down`；如果用户继续拖动，则按 pointer 相对摇杆 hit rect 中心的位置输出 `(-1..1, -1..1)` 的归一化向量；pointer up/cancel 时先回零，再触发 `LS/RS up`。
-- 摇杆不额外扩大 overlay 命中层，只有自己的 hit rect 捕获触摸；hit rect 外仍然透传给视频。
+- 摇杆按钮：pointer down 触发控件 down，并按 `stickCenterMode` 建立本次中心。默认 `touchDown` 在落点归零，`fixed` 立即按原布局中心计算偏移；拖动输出长度不超过 1 的向量，pointer up/cancel 时回零并触发控件 up。原命中框内的轻点另发 L3/R3 短按脉冲。
+- 移动摇杆的区域触发默认开启，可关闭以仅在原 hit rect 起手；成功起手后可拖出范围。普通按钮和其他摇杆原命中框优先于扩大区域，未命中任何有效起手范围的触摸透传给视频。
 
 CloudPlayPlus 接入时建议只依赖 `control.input`，不要依赖 label。`id` 用于 profile 编辑和 active state，`label` 只用于显示。

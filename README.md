@@ -6,7 +6,7 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 
 - 五区线性布局：`topLeft`、`topRight`、`bottomLeft`、`bottomCenter`、`bottomRight`
 - Xbox 默认 profile：摇杆、D-pad、ABXY、LB/LT/RB/RT、View/Menu/Xbox
-- 移动摇杆支持大范围起手，其他屏幕按钮优先；区域以外空白处不拦截下方视频触摸
+- 移动摇杆默认开启大范围起手，可关闭区域触发以仅在原命中框起手；其他屏幕按钮和其他摇杆原命中框优先，有效范围外不拦截下方视频触摸
 - 摇杆可选择以落点或原布局摇杆位置为中心；落点模式仅显示原半月，原布局中心模式可切换为固定位置的“半月＋触点”提示（左摇杆和 WASD 默认开启、右摇杆关闭），两种半月互斥显示。支持 down/up 和长度不超过 1 的归一化拖动向量
 - 统一事件模型：gamepad、keyboard、mouse、custom 输入都走 `OnscreenGamepadEvent`
 - profile 支持 compact JSON 往返，便于主仓持久化
@@ -48,7 +48,7 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 ## 最小接入
 
-把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆还接收所在半屏底部 72% 的空白区域，区域之外继续落到下层视频。
+把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆默认还接收所在半屏底部 72% 的空白区域，设置 `regionTrigger: false` 后仅在原命中框起手。所有有效起手范围之外继续落到下层视频。
 
 ```dart
 Stack(
