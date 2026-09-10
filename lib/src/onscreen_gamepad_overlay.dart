@@ -733,11 +733,11 @@ class _ControlButtonState extends State<_ControlButton>
           phase: phase,
         ),
       );
-      if (phase == OnscreenGamepadEventPhase.down) {
-        source.onDown?.call(source.placed.control);
-      } else {
-        source.onUp?.call(source.placed.control);
-      }
+    }
+    if (phase == OnscreenGamepadEventPhase.down) {
+      source.onDown?.call(source.placed.control);
+    } else {
+      source.onUp?.call(source.placed.control);
     }
   }
 

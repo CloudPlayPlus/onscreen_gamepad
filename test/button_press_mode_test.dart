@@ -183,4 +183,43 @@ void main() {
       expect(events.length, 4);
     },
   );
+
+  testWidgets('camera R3 forwards button phases to compatibility callbacks', (
+    tester,
+  ) async {
+    final camera = kOnscreenGamepadXboxProfile.controls
+        .firstWhere((c) => c.id == 'right-stick')
+        .copyWith(
+          stickMode: OnscreenGamepadStickMode.camera,
+          buttonPressMode: OnscreenGamepadButtonPressMode.toggle,
+        );
+    final phases = <String>[];
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: OnscreenGamepadOverlay(
+          profile: kOnscreenGamepadXboxProfile.copyWith(controls: [camera]),
+          onControlDown: (c) => phases.add('${c.id}:down'),
+          onControlUp: (c) => phases.add('${c.id}:up'),
+        ),
+      ),
+    );
+    final swipe = await tester.startGesture(const Offset(700, 50));
+    await swipe.moveBy(const Offset(10, 0));
+    await swipe.up();
+    expect(phases, isEmpty);
+    await tester.tap(find.text('R3'));
+    expect(phases, ['right-stick:down']);
+    await tester.tap(find.text('R3'));
+    expect(phases, ['right-stick:down', 'right-stick:up']);
+    await tester.tap(find.text('R3'));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    expect(phases, [
+      'right-stick:down',
+      'right-stick:up',
+      'right-stick:down',
+      'right-stick:up',
+    ]);
+  });
 }

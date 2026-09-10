@@ -103,8 +103,7 @@ OnscreenGamepadOverlay({
 - `showZones`：调试用，显示五个 anchor 区域。
 - `activeControlIds`：外部受控高亮状态。
 - `onEvent`：统一输入事件回调，推荐主仓优先接入。
-- `onControlDown`：所有控件 pointer down 都会触发，包括摇杆。
-- `onControlUp`：pointer up/cancel 触发。摇杆会先发送回零，再触发 up。
+- `onControlDown` / `onControlUp`：控件实际按下/释放时触发，包括视角 R3；锁定模式在解锁时才 up，滑动连按在最后一个持有者释放时 up，空白处转视角不触发这两个回调。普通摇杆释放时先回零再 up。
 - `onStickChanged`：仅摇杆触发，`Offset.dx/dy` 范围是 `-1..1`，屏幕向右/向下为正。
 
 ### `OnscreenGamepadProfile`
