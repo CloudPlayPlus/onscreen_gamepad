@@ -71,11 +71,15 @@ void main() {
         )
         .toList();
     final knobDecoration = visuals.last.decoration as BoxDecoration;
+    final baseDecoration = visuals.first.decoration as BoxDecoration;
     final label = tester.widget<Text>(find.text('LS'));
 
-    expect(knobDecoration.color?.a, closeTo(0.60, 0.001));
+    expect(baseDecoration.color, Colors.black.withAlpha(31));
+    expect(knobDecoration.color, Colors.white.withAlpha(122));
+    expect(label.style?.color, Colors.white.withAlpha(122));
+    expect(knobDecoration.color?.a, closeTo(0.48, 0.002));
     expect(knobDecoration.border, isNull);
-    expect(label.style?.color?.a, closeTo(0.60, 0.001));
+    expect(label.style?.color?.a, closeTo(0.48, 0.002));
   });
 
   testWidgets('overlay emits unified down and up events for buttons', (
@@ -212,7 +216,14 @@ void main() {
       ),
     );
 
-    final stickRect = tester.getRect(find.byKey(const ValueKey('left-stick')));
+    final stickRect = const OnscreenGamepadLayoutEngine()
+        .layout(
+          renderSize: tester.getSize(find.byType(OnscreenGamepadOverlay)),
+          profile: profile,
+        )
+        .controls
+        .single
+        .hitRect;
     final startPosition = stickRect.center + Offset(stickRect.width * 0.24, 0);
     final gesture = await tester.startGesture(startPosition);
     await tester.pump();
@@ -220,7 +231,7 @@ void main() {
     expect(events, hasLength(1));
     expect(events.single.phase, OnscreenGamepadEventPhase.down);
 
-    await gesture.moveBy(Offset(stickRect.width * 0.25, 0));
+    await gesture.moveBy(const Offset(20.5, 0));
     await tester.pump();
 
     final stickEvent = events.last;
@@ -252,7 +263,14 @@ void main() {
       ),
     );
 
-    final stickRect = tester.getRect(find.byKey(const ValueKey('left-stick')));
+    final stickRect = const OnscreenGamepadLayoutEngine()
+        .layout(
+          renderSize: tester.getSize(find.byType(OnscreenGamepadOverlay)),
+          profile: profile,
+        )
+        .controls
+        .single
+        .hitRect;
     await tester.tapAt(stickRect.center + Offset(stickRect.width * 0.24, 0));
     await tester.pump();
 

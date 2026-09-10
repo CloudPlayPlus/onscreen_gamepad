@@ -10,6 +10,14 @@ enum OnscreenGamepadAnchor {
 
 enum OnscreenGamepadControlKind { circle, square, stick }
 
+enum OnscreenGamepadStickCenterMode {
+  touchDown('按下位置为中心'),
+  fixed('原摇杆中心');
+
+  const OnscreenGamepadStickCenterMode(this.label);
+  final String label;
+}
+
 enum OnscreenGamepadControlRole {
   primary,
   secondary,
@@ -210,6 +218,9 @@ class OnscreenGamepadControl {
     required this.input,
     this.behavior = OnscreenGamepadControlBehavior.normal,
     this.behaviorConfig = const {},
+    this.positionFeedback,
+    this.positionFeedbackLocation,
+    this.stickCenterMode = OnscreenGamepadStickCenterMode.touchDown,
     this.sizeScale = 1,
     this.color,
     this.sortOrder = 0,
@@ -225,6 +236,23 @@ class OnscreenGamepadControl {
   final OnscreenGamepadInput input;
   final OnscreenGamepadControlBehavior behavior;
   final Map<String, Object?> behaviorConfig;
+
+  /// Optional per-control preference; absent values use the input's default.
+  final bool? positionFeedback;
+
+  /// 提示中心在屏幕宽高中的比例，未设置时使用摇杆上方的默认位置。
+  final Offset? positionFeedbackLocation;
+  final OnscreenGamepadStickCenterMode stickCenterMode;
+
+  bool get positionFeedbackEnabled =>
+      kind == OnscreenGamepadControlKind.stick &&
+      stickCenterMode == OnscreenGamepadStickCenterMode.fixed &&
+      (positionFeedback ??
+          (behavior == OnscreenGamepadControlBehavior.wasdStick ||
+              input.code == 'wasdStick' ||
+              input.code == 'leftStick' ||
+              input.xAxis == 'leftX'));
+
   final double sizeScale;
   final Color? color;
   final int sortOrder;
@@ -240,6 +268,9 @@ class OnscreenGamepadControl {
     OnscreenGamepadInput? input,
     OnscreenGamepadControlBehavior? behavior,
     Map<String, Object?>? behaviorConfig,
+    bool? positionFeedback,
+    Offset? positionFeedbackLocation,
+    OnscreenGamepadStickCenterMode? stickCenterMode,
     double? sizeScale,
     Color? color,
     int? sortOrder,
@@ -255,6 +286,10 @@ class OnscreenGamepadControl {
       input: input ?? this.input,
       behavior: behavior ?? this.behavior,
       behaviorConfig: behaviorConfig ?? this.behaviorConfig,
+      positionFeedback: positionFeedback ?? this.positionFeedback,
+      positionFeedbackLocation:
+          positionFeedbackLocation ?? this.positionFeedbackLocation,
+      stickCenterMode: stickCenterMode ?? this.stickCenterMode,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -274,6 +309,11 @@ class OnscreenGamepadControl {
       if (behavior != OnscreenGamepadControlBehavior.normal)
         'bh': behavior.name,
       if (behaviorConfig.isNotEmpty) 'bc': behaviorConfig,
+      if (positionFeedback != null) 'af': positionFeedback,
+      if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
+        'cm': stickCenterMode.name,
+      if (positionFeedbackLocation != null)
+        'fp': _offsetToJson(positionFeedbackLocation!),
       if (sizeScale != 1) 'z': sizeScale,
       if (color != null) 'co': color!.toARGB32(),
       if (sortOrder != 0) 'so': sortOrder,
@@ -312,6 +352,15 @@ class OnscreenGamepadControl {
         OnscreenGamepadControlBehavior.normal,
       ),
       behaviorConfig: _map(json['bc']),
+      positionFeedback: json['af'] is bool ? json['af'] as bool : null,
+      stickCenterMode: _enumByName(
+        OnscreenGamepadStickCenterMode.values,
+        json['cm'],
+        OnscreenGamepadStickCenterMode.touchDown,
+      ),
+      positionFeedbackLocation: json['fp'] is Map
+          ? _offsetFromJson(json['fp'])
+          : null,
       sizeScale: _double(json['z'], 1),
       color: _nullableColor(json['co']),
       sortOrder: _int(json['so'], 0),
@@ -324,9 +373,9 @@ class OnscreenGamepadProfile {
     required this.id,
     required this.name,
     required this.controls,
-    this.defaultColor = const Color(0xFF090E16),
-    this.backgroundOpacity = 0.36,
-    this.foregroundOpacity = 0.60,
+    this.defaultColor = const Color(0xFF000000),
+    this.backgroundOpacity = 0.12,
+    this.foregroundOpacity = 0.48,
   });
 
   final String id;
@@ -335,6 +384,8 @@ class OnscreenGamepadProfile {
   final Color defaultColor;
   final double backgroundOpacity;
   final double foregroundOpacity;
+
+  double get semicircleOpacity => (foregroundOpacity + 0.12).clamp(0.0, 1.0);
 
   OnscreenGamepadProfile copyWith({
     String? id,
@@ -369,9 +420,9 @@ class OnscreenGamepadProfile {
     return OnscreenGamepadProfile(
       id: _string(json['id'], ''),
       name: _string(json['n'], ''),
-      defaultColor: _color(json['dc'], const Color(0xFF090E16)),
-      backgroundOpacity: _double(json['bo'], 0.36),
-      foregroundOpacity: _double(json['fo'], 0.60),
+      defaultColor: _color(json['dc'], const Color(0xFF000000)),
+      backgroundOpacity: _double(json['bo'], 0.12),
+      foregroundOpacity: _double(json['fo'], 0.48),
       controls: _list(json['b'])
           .whereType<Map>()
           .map((item) => OnscreenGamepadControl.fromJson(_map(item)))
@@ -418,6 +469,26 @@ class OnscreenGamepadPlacedControl {
   final double visualSize;
   final Rect hitRect;
   final Rect visualRect;
+
+  Offset positionFeedbackCenter(Size renderSize) {
+    final location = control.positionFeedbackLocation;
+    final target = location == null
+        ? center +
+              Offset(
+                (center.dx < renderSize.width / 2 ? 1 : -1) * visualSize * .9,
+                -visualSize * 1.4,
+              )
+        : Offset(
+            location.dx * renderSize.width,
+            location.dy * renderSize.height,
+          );
+    final marginX = (visualSize * .34 + 8).clamp(0.0, renderSize.width / 2);
+    final marginY = (visualSize * .34 + 8).clamp(0.0, renderSize.height / 2);
+    return Offset(
+      target.dx.clamp(marginX, renderSize.width - marginX),
+      target.dy.clamp(marginY, renderSize.height - marginY),
+    );
+  }
 }
 
 class OnscreenGamepadLayoutResult {

@@ -6,8 +6,8 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 
 - 五区线性布局：`topLeft`、`topRight`、`bottomLeft`、`bottomCenter`、`bottomRight`
 - Xbox 默认 profile：摇杆、D-pad、ABXY、LB/LT/RB/RT、View/Menu/Xbox
-- 只命中真实按钮区域，overlay 空白区域不拦截下方视频触摸
-- 摇杆支持 down/up 和 `(-1..1, -1..1)` 归一化拖动向量
+- 移动摇杆支持大范围起手，其他屏幕按钮优先；区域以外空白处不拦截下方视频触摸
+- 摇杆可选择以落点或原布局摇杆位置为中心；落点模式仅显示原半月，原布局中心模式可切换为固定位置的“半月＋触点”提示（左摇杆和 WASD 默认开启、右摇杆关闭），两种半月互斥显示。支持 down/up 和长度不超过 1 的归一化拖动向量
 - 统一事件模型：gamepad、keyboard、mouse、custom 输入都走 `OnscreenGamepadEvent`
 - profile 支持 compact JSON 往返，便于主仓持久化
 - storage-agnostic profile store/controller：主仓可直接接入本地存储、云同步和 host 绑定
@@ -48,7 +48,7 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 ## 最小接入
 
-把 overlay 放在串流视频层上方即可。`OnscreenGamepadOverlay` 自身是透明 hit test 结构，只有每个按钮的 hit rect 会接收 pointer，空白处会继续落到下层视频。
+把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆还接收所在半屏底部 72% 的空白区域，区域之外继续落到下层视频。
 
 ```dart
 Stack(
@@ -111,9 +111,9 @@ OnscreenGamepadOverlay({
 const profile = OnscreenGamepadProfile(
   id: 'xbox-default',
   name: 'Xbox Default',
-  defaultColor: Color(0xFF090E16),
-  backgroundOpacity: 0.36,
-  foregroundOpacity: 0.60,
+  defaultColor: Color(0xFF000000),
+  backgroundOpacity: 0.12,
+  foregroundOpacity: 0.48,
   controls: [...],
 );
 ```

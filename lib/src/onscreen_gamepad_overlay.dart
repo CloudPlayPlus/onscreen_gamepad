@@ -8,6 +8,27 @@ import 'onscreen_gamepad_models.dart';
 
 const _kStickTapThresholdRatio = 0.01;
 const _kStickTapButtonDelay = Duration(milliseconds: 32);
+const _kStickDeadZone = 1.0;
+const _kStickTravel = 40.0;
+
+bool _isMovementStick(OnscreenGamepadControl control) {
+  return control.kind == OnscreenGamepadControlKind.stick &&
+      (control.behavior == OnscreenGamepadControlBehavior.wasdStick ||
+          control.input.code == 'wasdStick' ||
+          control.input.code == 'leftStick' ||
+          control.input.xAxis == 'leftX');
+}
+
+Rect _interactionRect(OnscreenGamepadPlacedControl placed, Size size) {
+  if (!_isMovementStick(placed.control)) return placed.hitRect;
+  final left = placed.hitRect.center.dx < size.width / 2;
+  return Rect.fromLTWH(
+    left ? 0 : size.width / 2,
+    size.height * .28,
+    size.width / 2,
+    size.height * .72,
+  ).expandToInclude(placed.hitRect);
+}
 
 typedef OnscreenGamepadControlEvent =
     void Function(OnscreenGamepadControl control);
@@ -61,12 +82,21 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                   rect: entry.value,
                   child: _ZonePaint(anchor: entry.key),
                 ),
-            for (final placed in result.controls)
+            // 移动摇杆的扩大区域置底，任何普通按钮的 hitbox 都优先响应。
+            for (final placed in [
+              ...result.controls.where((p) => _isMovementStick(p.control)),
+              ...result.controls.where((p) => !_isMovementStick(p.control)),
+            ])
               Positioned.fromRect(
-                rect: placed.hitRect,
+                key: ValueKey('position-${placed.control.id}'),
+                rect: _interactionRect(placed, renderSize),
                 child: _ControlButton(
                   key: ValueKey(placed.control.id),
                   placed: placed,
+                  interactionRect: _interactionRect(placed, renderSize),
+                  feedbackCenter:
+                      placed.positionFeedbackCenter(renderSize) -
+                      _interactionRect(placed, renderSize).topLeft,
                   profile: profile,
                   isActive: activeControlIds.contains(placed.control.id),
                   onEvent: onEvent,
@@ -86,6 +116,8 @@ class _ControlButton extends StatefulWidget {
   const _ControlButton({
     super.key,
     required this.placed,
+    required this.interactionRect,
+    required this.feedbackCenter,
     required this.profile,
     required this.isActive,
     this.onEvent,
@@ -95,6 +127,8 @@ class _ControlButton extends StatefulWidget {
   });
 
   final OnscreenGamepadPlacedControl placed;
+  final Rect interactionRect;
+  final Offset feedbackCenter;
   final OnscreenGamepadProfile profile;
   final bool isActive;
   final OnscreenGamepadEventCallback? onEvent;
@@ -106,7 +140,8 @@ class _ControlButton extends StatefulWidget {
   State<_ControlButton> createState() => _ControlButtonState();
 }
 
-class _ControlButtonState extends State<_ControlButton> {
+class _ControlButtonState extends State<_ControlButton>
+    with WidgetsBindingObserver {
   int? _activePointer;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
@@ -116,9 +151,59 @@ class _ControlButtonState extends State<_ControlButton> {
   int _mouseModeIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed && _activePointer != null) {
+      _releasePointer(allowStickTap: false);
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant _ControlButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.placed.control.id != widget.placed.control.id) {
+    if (oldWidget.placed.control.id != widget.placed.control.id ||
+        oldWidget.placed.control.stickCenterMode !=
+            widget.placed.control.stickCenterMode ||
+        oldWidget.interactionRect != widget.interactionRect ||
+        oldWidget.placed.hitRect != widget.placed.hitRect ||
+        oldWidget.placed.visualSize != widget.placed.visualSize) {
+      final active = _activePointer != null;
+      final wasMoving = _stickValue != Offset.zero;
+      // 布局重建时立刻清除旧手势，帧结束后回零，避免在 build 中回调父组件。
+      if (active) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (wasMoving) {
+            oldWidget.onEvent?.call(
+              OnscreenGamepadEvent.stickChanged(
+                control: oldWidget.placed.control,
+                value: Offset.zero,
+              ),
+            );
+            oldWidget.onStickChanged?.call(
+              oldWidget.placed.control,
+              Offset.zero,
+            );
+          }
+          oldWidget.onEvent?.call(
+            OnscreenGamepadEvent.control(
+              control: oldWidget.placed.control,
+              phase: OnscreenGamepadEventPhase.up,
+            ),
+          );
+          oldWidget.onUp?.call(oldWidget.placed.control);
+        });
+      }
       _activePointer = null;
       _stickValue = Offset.zero;
       _stickOrigin = null;
@@ -142,7 +227,7 @@ class _ControlButtonState extends State<_ControlButton> {
     final isActive = widget.isActive || _activePointer != null || _isToggled;
     final fillColor = isActive ? activeColor : color;
     final foreground = _withOpacity(
-      _bestTextColor(backgroundColor),
+      Colors.white,
       widget.profile.foregroundOpacity,
     );
 
@@ -152,15 +237,98 @@ class _ControlButtonState extends State<_ControlButton> {
       onPointerMove: _handlePointerMove,
       onPointerUp: _handlePointerUp,
       onPointerCancel: _handlePointerCancel,
-      child: Center(
-        child: _ControlVisual(
-          control: control,
-          fillColor: fillColor,
-          foreground: foreground,
-          size: widget.placed.visualSize,
-          isActive: isActive,
-          stickValue: _stickValue,
-        ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (_isStick(control) && _activePointer != null) ...[
+            if (!control.positionFeedbackEnabled &&
+                _stickOrigin != null &&
+                _stickValue != Offset.zero)
+              Positioned.fromRect(
+                rect: Rect.fromCenter(
+                  center: _stickOrigin!,
+                  width: widget.placed.visualSize * .68,
+                  height: widget.placed.visualSize * .68,
+                ),
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    key: ValueKey('${control.id}-semicircle'),
+                    painter: OnscreenGamepadSemicirclePainter(
+                      direction: _stickValue.direction,
+                      color: _withOpacity(
+                        Colors.white,
+                        widget.profile.semicircleOpacity,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (control.positionFeedbackEnabled &&
+                _stickOrigin != null &&
+                _lastPointerPosition != null &&
+                _stickValue != Offset.zero) ...[
+              Positioned.fromRect(
+                rect: Rect.fromCenter(
+                  center: widget.feedbackCenter,
+                  width: widget.placed.visualSize * .68,
+                  height: widget.placed.visualSize * .68,
+                ),
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    key: ValueKey('${control.id}-position-feedback'),
+                    painter: OnscreenGamepadSemicirclePainter(
+                      direction: _stickValue.direction,
+                      color: _withOpacity(
+                        Colors.white,
+                        widget.profile.semicircleOpacity,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fromRect(
+                rect: Rect.fromCenter(
+                  center:
+                      widget.feedbackCenter +
+                      _lastPointerPosition! -
+                      _stickOrigin!,
+                  width: 6,
+                  height: 6,
+                ),
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    key: ValueKey('${control.id}-touch-dot'),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: foreground,
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: foreground.a),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ] else
+            Positioned.fromRect(
+              rect: Rect.fromCenter(
+                center:
+                    widget.placed.hitRect.center -
+                    widget.interactionRect.topLeft,
+                width: widget.placed.visualSize,
+                height: widget.placed.visualSize,
+              ),
+              child: _ControlVisual(
+                control: control,
+                fillColor: fillColor,
+                foreground: foreground,
+                size: widget.placed.visualSize,
+                isActive: isActive,
+                stickValue: _stickValue,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -253,21 +421,32 @@ class _ControlButtonState extends State<_ControlButton> {
   }
 
   void _beginStick(Offset localPosition) {
-    _stickOrigin = localPosition;
-    _stickTapCandidate = true;
-    _setStickValue(Offset.zero);
+    _stickOrigin =
+        widget.placed.control.stickCenterMode ==
+            OnscreenGamepadStickCenterMode.fixed
+        ? widget.placed.center - widget.interactionRect.topLeft
+        : localPosition;
+    _stickTapCandidate = widget.placed.hitRect
+        .shift(-widget.interactionRect.topLeft)
+        .contains(localPosition);
+    _updateStick(localPosition);
   }
 
   void _updateStick(Offset localPosition) {
-    final half = widget.placed.hitSize / 2;
-    final origin = _stickOrigin ?? Offset(half, half);
+    // 满力度时输入向量可能不变，触点提示仍须跟随真实手指位置。
+    if (_lastPointerPosition != localPosition) {
+      setState(() => _lastPointerPosition = localPosition);
+    }
+    final origin = _stickOrigin!;
     final delta = localPosition - origin;
-    final raw = delta / half;
-    final distance = raw.distance;
-    if (distance > _kStickTapThresholdRatio) {
+    final distance = delta.distance;
+    if (distance > widget.placed.hitSize / 2 * _kStickTapThresholdRatio) {
       _stickTapCandidate = false;
     }
-    final value = distance <= 1 || distance == 0 ? raw : raw / distance;
+    final force =
+        ((distance - _kStickDeadZone) / (_kStickTravel - _kStickDeadZone))
+            .clamp(0.0, 1.0);
+    final value = distance == 0 ? Offset.zero : delta / distance * force;
     _setStickValue(value);
   }
 
@@ -411,6 +590,44 @@ class _ControlButtonState extends State<_ControlButton> {
   }
 }
 
+class OnscreenGamepadSemicirclePainter extends CustomPainter {
+  const OnscreenGamepadSemicirclePainter({
+    required this.direction,
+    required this.color,
+  });
+
+  final double direction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final radius = size.shortestSide / 2;
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.rotate(direction);
+    // 略多于半圆的填充圆面，朝前端亮，向直线根部透明。
+    final bounds = Rect.fromLTRB(-radius * .16, -radius, radius, radius);
+    canvas.clipRect(bounds);
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          color.withValues(alpha: 0),
+          color.withValues(alpha: color.a * .15),
+          color.withValues(alpha: color.a * .53),
+          color,
+        ],
+        stops: const [0, .276, .621, 1],
+      ).createShader(bounds);
+    canvas.drawCircle(Offset.zero, radius, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(OnscreenGamepadSemicirclePainter oldDelegate) {
+    return oldDelegate.direction != direction || oldDelegate.color != color;
+  }
+}
+
 class _ControlVisual extends StatelessWidget {
   const _ControlVisual({
     required this.control,
@@ -447,13 +664,6 @@ class _ControlVisual extends StatelessWidget {
           shape: shape,
           borderRadius: borderRadius,
           color: fillColor,
-          boxShadow: [
-            BoxShadow(
-              color: _withOpacity(Colors.black, 0.40),
-              blurRadius: size * 0.18,
-              offset: Offset(0, size * 0.05),
-            ),
-          ],
         ),
         child: SizedBox.square(
           dimension: size,
@@ -553,12 +763,6 @@ class _ZonePaint extends StatelessWidget {
       ),
     );
   }
-}
-
-Color _bestTextColor(Color color) {
-  return color.computeLuminance() > 0.48
-      ? const Color(0xFF10151F)
-      : Colors.white;
 }
 
 Color _withOpacity(Color color, double opacity) {
