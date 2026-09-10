@@ -10,6 +10,14 @@ enum OnscreenGamepadAnchor {
 
 enum OnscreenGamepadControlKind { circle, square, stick }
 
+enum OnscreenGamepadStickMode {
+  joystick('摇杆'),
+  camera('视角转动');
+
+  const OnscreenGamepadStickMode(this.label);
+  final String label;
+}
+
 enum OnscreenGamepadStickCenterMode {
   touchDown('按下位置为中心'),
   fixed('原摇杆中心');
@@ -222,6 +230,9 @@ class OnscreenGamepadControl {
     this.positionFeedbackLocation,
     this.stickCenterMode = OnscreenGamepadStickCenterMode.touchDown,
     this.regionTrigger = true,
+    this.stickMode = OnscreenGamepadStickMode.joystick,
+    this.mouseSensitivity = 1,
+    this.autoRun = true,
     this.sizeScale = 1,
     this.color,
     this.sortOrder = 0,
@@ -245,6 +256,20 @@ class OnscreenGamepadControl {
   final Offset? positionFeedbackLocation;
   final OnscreenGamepadStickCenterMode stickCenterMode;
   final bool regionTrigger;
+  final OnscreenGamepadStickMode stickMode;
+  final double mouseSensitivity;
+  final bool autoRun;
+
+  bool get isRightStick =>
+      kind == OnscreenGamepadControlKind.stick &&
+      (input.code == 'rightStick' || input.xAxis == 'rightX');
+  bool get isCameraStick =>
+      isRightStick && stickMode == OnscreenGamepadStickMode.camera;
+  bool get regionTriggerEnabled =>
+      isCameraStick || (isMovementStick && regionTrigger);
+  bool get autoRunEnabled => isMovementStick && !isCameraStick && autoRun;
+  double get effectiveMouseSensitivity =>
+      mouseSensitivity.isFinite ? mouseSensitivity.clamp(.1, 5) : 1;
 
   bool get isMovementStick =>
       kind == OnscreenGamepadControlKind.stick &&
@@ -254,6 +279,7 @@ class OnscreenGamepadControl {
           input.xAxis == 'leftX');
 
   bool get positionFeedbackEnabled =>
+      !isCameraStick &&
       kind == OnscreenGamepadControlKind.stick &&
       stickCenterMode == OnscreenGamepadStickCenterMode.fixed &&
       (positionFeedback ?? isMovementStick);
@@ -277,6 +303,9 @@ class OnscreenGamepadControl {
     Offset? positionFeedbackLocation,
     OnscreenGamepadStickCenterMode? stickCenterMode,
     bool? regionTrigger,
+    OnscreenGamepadStickMode? stickMode,
+    double? mouseSensitivity,
+    bool? autoRun,
     double? sizeScale,
     Color? color,
     int? sortOrder,
@@ -297,6 +326,9 @@ class OnscreenGamepadControl {
           positionFeedbackLocation ?? this.positionFeedbackLocation,
       stickCenterMode: stickCenterMode ?? this.stickCenterMode,
       regionTrigger: regionTrigger ?? this.regionTrigger,
+      stickMode: stickMode ?? this.stickMode,
+      mouseSensitivity: mouseSensitivity ?? this.mouseSensitivity,
+      autoRun: autoRun ?? this.autoRun,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -318,6 +350,9 @@ class OnscreenGamepadControl {
       if (behaviorConfig.isNotEmpty) 'bc': behaviorConfig,
       if (positionFeedback != null) 'af': positionFeedback,
       if (!regionTrigger) 'rt': false,
+      if (stickMode != OnscreenGamepadStickMode.joystick) 'sm': stickMode.name,
+      if (mouseSensitivity != 1) 'ms': effectiveMouseSensitivity,
+      if (!autoRun) 'ar': false,
       if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
         'cm': stickCenterMode.name,
       if (positionFeedbackLocation != null)
@@ -362,6 +397,13 @@ class OnscreenGamepadControl {
       behaviorConfig: _map(json['bc']),
       positionFeedback: json['af'] is bool ? json['af'] as bool : null,
       regionTrigger: json['rt'] is bool ? json['rt'] as bool : true,
+      stickMode: _enumByName(
+        OnscreenGamepadStickMode.values,
+        json['sm'],
+        OnscreenGamepadStickMode.joystick,
+      ),
+      mouseSensitivity: _double(json['ms'], 1),
+      autoRun: json['ar'] is bool ? json['ar'] as bool : true,
       stickCenterMode: _enumByName(
         OnscreenGamepadStickCenterMode.values,
         json['cm'],

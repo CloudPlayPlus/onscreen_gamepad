@@ -13,15 +13,15 @@ const _kStickDeadZone = 1.0;
 const _kStickTravel = 40.0;
 
 Rect _interactionRect(OnscreenGamepadPlacedControl placed, Size size) {
-  if (!placed.control.isMovementStick || !placed.control.regionTrigger) {
+  if (!placed.control.regionTriggerEnabled) {
     return placed.hitRect;
   }
   final left = placed.hitRect.center.dx < size.width / 2;
   return Rect.fromLTWH(
     left ? 0 : size.width / 2,
-    size.height * .28,
+    0,
     size.width / 2,
-    size.height * .72,
+    size.height,
   ).expandToInclude(placed.hitRect);
 }
 
@@ -79,8 +79,12 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                 ),
             // 移动摇杆的扩大区域置底，任何普通按钮的 hitbox 都优先响应。
             for (final placed in [
-              ...result.controls.where((p) => p.control.isMovementStick),
-              ...result.controls.where((p) => !p.control.isMovementStick),
+              ...result.controls.where(
+                (p) => p.control.isMovementStick || p.control.isCameraStick,
+              ),
+              ...result.controls.where(
+                (p) => !p.control.isMovementStick && !p.control.isCameraStick,
+              ),
             ])
               Positioned.fromRect(
                 key: ValueKey('position-${placed.control.id}'),
@@ -90,10 +94,10 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                     -_interactionRect(placed, renderSize).topLeft,
                   ),
                   peerRects: [
-                    if (placed.control.isMovementStick &&
-                        placed.control.regionTrigger)
+                    if (placed.control.regionTriggerEnabled)
                       for (final peer in result.controls)
-                        if (peer.control.isMovementStick &&
+                        if (peer.control.kind ==
+                                OnscreenGamepadControlKind.stick &&
                             peer.control.id != placed.control.id)
                           peer.hitRect.shift(
                             -_interactionRect(placed, renderSize).topLeft,
@@ -102,6 +106,7 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                   child: _ControlButton(
                     key: ValueKey(placed.control.id),
                     placed: placed,
+                    renderSize: renderSize,
                     interactionRect: _interactionRect(placed, renderSize),
                     feedbackCenter:
                         placed.positionFeedbackCenter(renderSize) -
@@ -162,10 +167,51 @@ class _RenderStickHitPriority extends RenderProxyBox {
   }
 }
 
+class _RunIndicator extends StatelessWidget {
+  const _RunIndicator({
+    super.key,
+    required this.color,
+    required this.highlighted,
+    this.arrows = false,
+  });
+  final Color color;
+  final bool highlighted;
+  final bool arrows;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Positioned.fill(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: highlighted ? .28 : .12),
+            border: Border.all(color: color, width: highlighted ? 2 : 1),
+          ),
+          child: Icon(
+            arrows ? Icons.directions_run : Icons.keyboard_double_arrow_up,
+            color: color,
+            size: arrows ? 30 : 42,
+          ),
+        ),
+      ),
+      if (arrows)
+        Positioned(
+          top: 43,
+          left: 8,
+          right: 8,
+          child: Icon(Icons.keyboard_double_arrow_up, size: 28, color: color),
+        ),
+    ],
+  );
+}
+
 class _ControlButton extends StatefulWidget {
   const _ControlButton({
     super.key,
     required this.placed,
+    required this.renderSize,
     required this.interactionRect,
     required this.feedbackCenter,
     required this.profile,
@@ -177,6 +223,7 @@ class _ControlButton extends StatefulWidget {
   });
 
   final OnscreenGamepadPlacedControl placed;
+  final Size renderSize;
   final Rect interactionRect;
   final Offset feedbackCenter;
   final OnscreenGamepadProfile profile;
@@ -193,6 +240,8 @@ class _ControlButton extends StatefulWidget {
 class _ControlButtonState extends State<_ControlButton>
     with WidgetsBindingObserver {
   int? _activePointer;
+  int? _cameraButtonPointer;
+  bool _autoRunning = false;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
   Offset? _stickTouchDown;
@@ -219,6 +268,8 @@ class _ControlButtonState extends State<_ControlButton>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed &&
         (_activePointer != null ||
+            _cameraButtonPointer != null ||
+            _autoRunning ||
             _isToggled ||
             _pendingStickButtonUps.isNotEmpty)) {
       _cancelInput(widget);
@@ -230,6 +281,12 @@ class _ControlButtonState extends State<_ControlButton>
   void didUpdateWidget(covariant _ControlButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placed.control.id != widget.placed.control.id ||
+        oldWidget.placed.control.isCameraStick !=
+            widget.placed.control.isCameraStick ||
+        oldWidget.placed.control.stickMode != widget.placed.control.stickMode ||
+        oldWidget.placed.control.mouseSensitivity !=
+            widget.placed.control.mouseSensitivity ||
+        oldWidget.placed.control.autoRun != widget.placed.control.autoRun ||
         oldWidget.placed.control.stickCenterMode !=
             widget.placed.control.stickCenterMode ||
         oldWidget.placed.control.regionTrigger !=
@@ -243,24 +300,35 @@ class _ControlButtonState extends State<_ControlButton>
 
   void _cancelInput(_ControlButton source, {bool afterFrame = false}) {
     final control = source.placed.control;
+    final cameraButtonDown = _cameraButtonPointer != null;
     final active = switch (control.behavior) {
       OnscreenGamepadControlBehavior.toggle => _isToggled,
       OnscreenGamepadControlBehavior.mouseModeCycle => false,
-      _ => _activePointer != null,
+      _ => _activePointer != null || _autoRunning,
     };
     final wasMoving = _stickValue != Offset.zero;
     final pendingStickButtonUps = _pendingStickButtonUps.toList();
     // 先清除本地手势，旧命中路径后续的 move/up 不得再次输出。
     _activePointer = null;
+    _cameraButtonPointer = null;
+    _autoRunning = false;
     _stickValue = Offset.zero;
     _stickOrigin = null;
     _stickTouchDown = null;
     _stickTapCandidate = false;
     _lastPointerPosition = null;
     _isToggled = false;
-    if (!active && !wasMoving && pendingStickButtonUps.isEmpty) return;
+    if (!active &&
+        !wasMoving &&
+        !cameraButtonDown &&
+        pendingStickButtonUps.isEmpty) {
+      return;
+    }
 
     void release() {
+      if (cameraButtonDown) {
+        _emitCameraButton(source, OnscreenGamepadEventPhase.up);
+      }
       for (final up in pendingStickButtonUps) {
         up();
       }
@@ -273,7 +341,7 @@ class _ControlButtonState extends State<_ControlButton>
         );
         source.onStickChanged?.call(control, Offset.zero);
       }
-      if (active) {
+      if (active && !control.isCameraStick) {
         source.onEvent?.call(
           OnscreenGamepadEvent.control(
             control: control,
@@ -292,6 +360,37 @@ class _ControlButtonState extends State<_ControlButton>
     }
   }
 
+  bool get _showRunTarget =>
+      widget.placed.control.autoRunEnabled &&
+      _activePointer != null &&
+      _stickValue.dy < 0 &&
+      _stickValue.dx.abs() <= -_stickValue.dy * math.tan(math.pi / 6);
+
+  Offset get _runTarget {
+    final center = widget.placed.control.positionFeedbackEnabled
+        ? widget.feedbackCenter
+        : _stickOrigin!;
+    final global =
+        center +
+        widget.interactionRect.topLeft -
+        Offset(0, widget.placed.visualSize * .34 + 56);
+    final marginX = math.min(24.0, widget.renderSize.width / 2);
+    final marginY = math.min(24.0, widget.renderSize.height / 2);
+    return Offset(
+          global.dx.clamp(marginX, widget.renderSize.width - marginX),
+          global.dy.clamp(marginY, widget.renderSize.height - marginY),
+        ) -
+        widget.interactionRect.topLeft;
+  }
+
+  bool get _runTargetReached {
+    if (!_showRunTarget || _stickValue.distance < .99) return false;
+    final touch = widget.placed.control.positionFeedbackEnabled
+        ? widget.feedbackCenter + _lastPointerPosition! - _stickOrigin!
+        : _lastPointerPosition!;
+    return (touch - _runTarget).distance <= 30;
+  }
+
   @override
   Widget build(BuildContext context) {
     final control = widget.placed.control;
@@ -303,7 +402,12 @@ class _ControlButtonState extends State<_ControlButton>
       backgroundColor.withAlpha(255),
     );
     final activeColor = _withOpacity(activeBaseColor, backgroundOpacity);
-    final isActive = widget.isActive || _activePointer != null || _isToggled;
+    final isActive =
+        widget.isActive ||
+        (control.isCameraStick
+            ? _cameraButtonPointer != null
+            : _activePointer != null) ||
+        _isToggled;
     final fillColor = isActive ? activeColor : color;
     final foreground = _withOpacity(
       Colors.white,
@@ -319,7 +423,9 @@ class _ControlButtonState extends State<_ControlButton>
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          if (_isStick(control) && _activePointer != null) ...[
+          if (!control.isCameraStick &&
+              _isStick(control) &&
+              _activePointer != null) ...[
             if (!control.positionFeedbackEnabled &&
                 _stickOrigin != null &&
                 _stickValue != Offset.zero)
@@ -399,12 +505,46 @@ class _ControlButtonState extends State<_ControlButton>
                 height: widget.placed.visualSize,
               ),
               child: _ControlVisual(
-                control: control,
+                control: control.isCameraStick
+                    ? control.copyWith(
+                        kind: OnscreenGamepadControlKind.circle,
+                        label: 'R3',
+                      )
+                    : _autoRunning
+                    ? control.copyWith(label: '')
+                    : control,
                 fillColor: fillColor,
                 foreground: foreground,
                 size: widget.placed.visualSize,
                 isActive: isActive,
                 stickValue: _stickValue,
+              ),
+            ),
+          if (_showRunTarget)
+            Positioned.fromRect(
+              rect: Rect.fromCenter(center: _runTarget, width: 44, height: 44),
+              child: IgnorePointer(
+                child: _RunIndicator(
+                  key: ValueKey('${control.id}-run-target'),
+                  color: foreground,
+                  highlighted: _runTargetReached,
+                  arrows: true,
+                ),
+              ),
+            ),
+          if (_autoRunning)
+            Positioned.fromRect(
+              rect: Rect.fromCenter(
+                center: widget.placed.center - widget.interactionRect.topLeft,
+                width: widget.placed.visualSize,
+                height: widget.placed.visualSize,
+              ),
+              child: IgnorePointer(
+                child: _RunIndicator(
+                  key: ValueKey('${control.id}-running'),
+                  color: foreground,
+                  highlighted: true,
+                ),
               ),
             ),
         ],
@@ -413,6 +553,22 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _handlePointerDown(PointerDownEvent event) {
+    if (widget.placed.control.isCameraStick) {
+      final inButton = widget.placed.hitRect
+          .shift(-widget.interactionRect.topLeft)
+          .contains(event.localPosition);
+      if (inButton) {
+        if (_cameraButtonPointer != null) return;
+        setState(() => _cameraButtonPointer = event.pointer);
+        _emitCameraButton(widget, OnscreenGamepadEventPhase.down);
+      } else if (_activePointer == null) {
+        _activePointer = event.pointer;
+        _lastPointerPosition = event.localPosition;
+      }
+      return;
+    }
+    final wasRunning = _autoRunning;
+    if (wasRunning) _cancelInput(widget);
     if (_activePointer != null) {
       return;
     }
@@ -432,6 +588,7 @@ class _ControlButtonState extends State<_ControlButton>
     _emitControlPhase(OnscreenGamepadEventPhase.down);
     if (_isStick(control)) {
       _beginStick(event.localPosition);
+      if (wasRunning) _stickTapCandidate = false;
     }
   }
 
@@ -440,6 +597,18 @@ class _ControlButtonState extends State<_ControlButton>
       return;
     }
     final control = widget.placed.control;
+    if (control.isCameraStick) {
+      final delta =
+          (event.localPosition - _lastPointerPosition!) *
+          control.effectiveMouseSensitivity;
+      _lastPointerPosition = event.localPosition;
+      if (delta != Offset.zero) {
+        widget.onEvent?.call(
+          OnscreenGamepadEvent.mouseMove(control: control, delta: delta),
+        );
+      }
+      return;
+    }
     if (_isStick(control)) {
       _updateStick(event.localPosition);
     }
@@ -449,21 +618,65 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _handlePointerUp(PointerUpEvent event) {
+    if (_releaseCameraPointer(event.pointer)) return;
     if (event.pointer != _activePointer) {
       return;
     }
+    if (_isStick(widget.placed.control)) _updateStick(event.localPosition);
     _releasePointer();
   }
 
   void _handlePointerCancel(PointerCancelEvent event) {
+    if (_releaseCameraPointer(event.pointer)) return;
     if (event.pointer != _activePointer) {
       return;
     }
     _releasePointer(allowStickTap: false);
   }
 
+  void _emitCameraButton(
+    _ControlButton source,
+    OnscreenGamepadEventPhase phase,
+  ) {
+    source.onEvent?.call(
+      OnscreenGamepadEvent(
+        type: OnscreenGamepadEventType.gamepadButton,
+        phase: phase,
+        control: source.placed.control,
+        input: OnscreenGamepadInput.gamepadButton(
+          source.placed.control.input.buttonCode ?? 'rightStickButton',
+        ),
+      ),
+    );
+  }
+
+  bool _releaseCameraPointer(int pointer) {
+    if (!widget.placed.control.isCameraStick) return false;
+    if (pointer == _cameraButtonPointer) {
+      setState(() => _cameraButtonPointer = null);
+      _emitCameraButton(widget, OnscreenGamepadEventPhase.up);
+    }
+    if (pointer == _activePointer) {
+      _activePointer = null;
+      _lastPointerPosition = null;
+    }
+    return true;
+  }
+
   void _releasePointer({bool allowStickTap = true}) {
     final control = widget.placed.control;
+    if (allowStickTap && _runTargetReached) {
+      setState(() {
+        _autoRunning = true;
+        _activePointer = null;
+        _stickOrigin = null;
+        _stickTouchDown = null;
+        _stickTapCandidate = false;
+        _lastPointerPosition = null;
+      });
+      _setStickValue(const Offset(0, -1));
+      return;
+    }
     if (control.behavior == OnscreenGamepadControlBehavior.toggle) {
       setState(() {
         _activePointer = null;

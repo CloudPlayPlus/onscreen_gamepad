@@ -48,7 +48,7 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 ## 最小接入
 
-把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆默认还接收所在半屏底部 72% 的空白区域，设置 `regionTrigger: false` 后仅在原命中框起手。所有有效起手范围之外继续落到下层视频。
+把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆默认还接收所在完整半屏的空白区域，设置 `regionTrigger: false` 后仅在原命中框起手。右摇杆可切为 `stickMode: OnscreenGamepadStickMode.camera`，强制半屏鼠标视角转动，本体仅作 R3；`mouseSensitivity` 调整倍率。移动摇杆的 `autoRun` 默认开启，向上推至奔跑提示附近松手锁定，再次触碰解除。所有有效起手范围之外继续落到下层视频。
 
 ```dart
 Stack(
