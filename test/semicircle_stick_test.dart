@@ -247,6 +247,47 @@ void main() {
     },
   );
 
+  testWidgets(
+    'movement stick hit boxes beat peer regions and retain their pointers',
+    (tester) async {
+      for (final firstExpanded in [true, false]) {
+        final first = stick.copyWith(regionTrigger: firstExpanded);
+        final second = stick.copyWith(
+          id: 'second-stick',
+          label: 'second',
+          offset: stick.offset + const Offset(0, -1),
+          sortOrder: stick.sortOrder + 1,
+        );
+        final selected = profile.copyWith(controls: [first, second]);
+        final layout = const OnscreenGamepadLayoutEngine().layout(
+          renderSize: const Size(800, 600),
+          profile: selected,
+        );
+        final a = layout.controls.first;
+        final b = layout.controls.last;
+        expect(a.hitRect.overlaps(b.hitRect), isFalse);
+        expect(b.center.dx, lessThan(400));
+        final events = <OnscreenGamepadEvent>[];
+        await mount(tester, events, customProfile: selected);
+        final pointerA = await tester.startGesture(a.center, pointer: 11);
+        expect(events.single.control.id, first.id);
+        final pointerB = await tester.startGesture(b.center, pointer: 12);
+        expect(events.last.control.id, second.id);
+        await pointerA.moveTo(b.center);
+        expect(events.last.control.id, first.id);
+        expect(events.last.value!.distance, closeTo(1, .001));
+        await pointerB.moveTo(a.center);
+        expect(events.last.control.id, second.id);
+        await pointerA.cancel();
+        await pointerB.cancel();
+        await tester.pump();
+        events.clear();
+        await tester.tapAt(const Offset(340, 460));
+        expect(events.map((e) => e.control.id).toSet(), {second.id});
+      }
+    },
+  );
+
   test('stick center mode defaults and survives JSON and copying', () {
     expect(stick.stickCenterMode, OnscreenGamepadStickCenterMode.touchDown);
     for (final mode in OnscreenGamepadStickCenterMode.values) {

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'onscreen_gamepad_events.dart';
 import 'onscreen_gamepad_layout.dart';
@@ -84,25 +85,80 @@ class OnscreenGamepadOverlay extends StatelessWidget {
               Positioned.fromRect(
                 key: ValueKey('position-${placed.control.id}'),
                 rect: _interactionRect(placed, renderSize),
-                child: _ControlButton(
-                  key: ValueKey(placed.control.id),
-                  placed: placed,
-                  interactionRect: _interactionRect(placed, renderSize),
-                  feedbackCenter:
-                      placed.positionFeedbackCenter(renderSize) -
-                      _interactionRect(placed, renderSize).topLeft,
-                  profile: profile,
-                  isActive: activeControlIds.contains(placed.control.id),
-                  onEvent: onEvent,
-                  onDown: onControlDown,
-                  onUp: onControlUp,
-                  onStickChanged: onStickChanged,
+                child: _StickHitPriority(
+                  ownRect: placed.hitRect.shift(
+                    -_interactionRect(placed, renderSize).topLeft,
+                  ),
+                  peerRects: [
+                    if (placed.control.isMovementStick &&
+                        placed.control.regionTrigger)
+                      for (final peer in result.controls)
+                        if (peer.control.isMovementStick &&
+                            peer.control.id != placed.control.id)
+                          peer.hitRect.shift(
+                            -_interactionRect(placed, renderSize).topLeft,
+                          ),
+                  ],
+                  child: _ControlButton(
+                    key: ValueKey(placed.control.id),
+                    placed: placed,
+                    interactionRect: _interactionRect(placed, renderSize),
+                    feedbackCenter:
+                        placed.positionFeedbackCenter(renderSize) -
+                        _interactionRect(placed, renderSize).topLeft,
+                    profile: profile,
+                    isActive: activeControlIds.contains(placed.control.id),
+                    onEvent: onEvent,
+                    onDown: onControlDown,
+                    onUp: onControlUp,
+                    onStickChanged: onStickChanged,
+                  ),
                 ),
               ),
           ],
         );
       },
     );
+  }
+}
+
+// 仅改变起手命中，不裁剪半月，也不影响已捕获指针的 move/up。
+class _StickHitPriority extends SingleChildRenderObjectWidget {
+  const _StickHitPriority({
+    required this.ownRect,
+    required this.peerRects,
+    required super.child,
+  });
+  final Rect ownRect;
+  final List<Rect> peerRects;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderStickHitPriority(ownRect, peerRects);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderStickHitPriority renderObject,
+  ) {
+    renderObject
+      ..ownRect = ownRect
+      ..peerRects = peerRects;
+  }
+}
+
+class _RenderStickHitPriority extends RenderProxyBox {
+  _RenderStickHitPriority(this.ownRect, this.peerRects);
+  Rect ownRect;
+  List<Rect> peerRects;
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!ownRect.contains(position) &&
+        peerRects.any((rect) => rect.contains(position))) {
+      return false;
+    }
+    return super.hitTest(result, position: position);
   }
 }
 
