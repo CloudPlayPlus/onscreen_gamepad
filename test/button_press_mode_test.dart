@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onscreen_gamepad/onscreen_gamepad.dart';
@@ -51,6 +53,89 @@ void main() {
   final button = kOnscreenGamepadXboxProfile.controls.firstWhere(
     (c) => c.id == 'a',
   );
+  testWidgets(
+    'equivalent rebuilt input preserves hold but payload changes release',
+    (tester) async {
+      final control = button.copyWith(
+        input: const OnscreenGamepadInput(
+          kind: OnscreenGamepadInputKind.gamepadButton,
+          code: 'a',
+          payload: {
+            'config': {
+              'values': [1, 2],
+            },
+          },
+        ),
+      );
+      final events = <OnscreenGamepadEvent>[];
+      Future<void> mount(OnscreenGamepadControl current) => tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: OnscreenGamepadOverlay(
+            profile: kOnscreenGamepadXboxProfile.copyWith(controls: [current]),
+            onEvent: events.add,
+          ),
+        ),
+      );
+      await mount(control);
+      final finger = await tester.startGesture(
+        tester.getCenter(find.text('A')),
+      );
+      final rebuilt = OnscreenGamepadControl.fromJson(
+        jsonDecode(jsonEncode(control.toJson())) as Map<String, dynamic>,
+      );
+      await mount(rebuilt);
+      expect(events.length, 1);
+      await mount(
+        rebuilt.copyWith(
+          input: const OnscreenGamepadInput(
+            kind: OnscreenGamepadInputKind.gamepadButton,
+            code: 'a',
+            payload: {
+              'config': {
+                'values': [1, 3],
+              },
+            },
+          ),
+        ),
+      );
+      expect(events.length, 2);
+      expect(events.last.isUp, isTrue);
+      await finger.up();
+      expect(events.length, 2);
+    },
+  );
+  testWidgets('equivalent rebuilt stick keeps its captured pointer', (
+    tester,
+  ) async {
+    final left = kOnscreenGamepadXboxProfile.controls.firstWhere(
+      (c) => c.id == 'left-stick',
+    );
+    final events = <OnscreenGamepadEvent>[];
+    Future<void> mount(OnscreenGamepadControl current) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: OnscreenGamepadOverlay(
+          profile: kOnscreenGamepadXboxProfile.copyWith(controls: [current]),
+          onEvent: events.add,
+        ),
+      ),
+    );
+    await mount(left);
+    final finger = await tester.startGesture(const Offset(240, 400));
+    await finger.moveBy(const Offset(20, 0));
+    final before = events.length;
+    await mount(
+      OnscreenGamepadControl.fromJson(
+        jsonDecode(jsonEncode(left.toJson())) as Map<String, dynamic>,
+      ),
+    );
+    expect(events.length, before);
+    await finger.moveBy(const Offset(20, 0));
+    expect(events.last.value, const Offset(1, 0));
+    await finger.up();
+    expect(events.where((e) => e.value != null).last.value, Offset.zero);
+  });
   test('button press mode survives serialization and copying', () {
     for (final mode in OnscreenGamepadButtonPressMode.values) {
       final saved = button.copyWith(buttonPressMode: mode).toJson();

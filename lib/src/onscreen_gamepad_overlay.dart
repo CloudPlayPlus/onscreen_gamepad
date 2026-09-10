@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -332,7 +334,10 @@ class _ControlButtonState extends State<_ControlButton>
     if (oldWidget.placed.control.id != widget.placed.control.id ||
         oldWidget.placed.control.buttonPressMode !=
             widget.placed.control.buttonPressMode ||
-        oldWidget.placed.control.input != widget.placed.control.input ||
+        !const DeepCollectionEquality().equals(
+          oldWidget.placed.control.input.toJson(),
+          widget.placed.control.input.toJson(),
+        ) ||
         oldWidget.placed.control.behavior != widget.placed.control.behavior ||
         oldWidget.placed.control.kind != widget.placed.control.kind ||
         oldWidget.placed.control.isCameraStick !=
