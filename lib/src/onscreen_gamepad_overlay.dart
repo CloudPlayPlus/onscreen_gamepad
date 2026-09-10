@@ -180,7 +180,7 @@ class _ControlButtonState extends State<_ControlButton>
         oldWidget.interactionRect != widget.interactionRect ||
         oldWidget.placed.hitRect != widget.placed.hitRect ||
         oldWidget.placed.visualSize != widget.placed.visualSize) {
-      final active = _activePointer != null;
+      final active = _activePointer != null || _isToggled;
       final wasMoving = _stickValue != Offset.zero;
       // 布局重建时立刻清除旧手势，帧结束后回零，避免在 build 中回调父组件。
       if (active) {

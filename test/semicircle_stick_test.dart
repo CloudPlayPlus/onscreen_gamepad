@@ -444,6 +444,31 @@ void main() {
     },
   );
 
+  testWidgets('resizing releases a latched toggle after its pointer is up', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    final toggled = button.copyWith(
+      behavior: OnscreenGamepadControlBehavior.toggle,
+    );
+    final toggledProfile = profile.copyWith(controls: [toggled]);
+    await mount(tester, events, customProfile: toggledProfile);
+    await tester.tap(find.byKey(ValueKey(toggled.id)));
+    await tester.pump();
+    expect(events.single.isDown, isTrue);
+    await mount(
+      tester,
+      events,
+      size: const Size(700, 550),
+      customProfile: toggledProfile,
+    );
+    await tester.pump();
+    expect(events, hasLength(2));
+    expect(events.last.isUp, isTrue);
+    await tester.tap(find.byKey(ValueKey(toggled.id)));
+    expect(events.last.isDown, isTrue);
+  });
+
   testWidgets('unmounted controls ignore the remainder of a captured pointer', (
     tester,
   ) async {
