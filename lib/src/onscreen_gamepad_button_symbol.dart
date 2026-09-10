@@ -172,27 +172,74 @@ class _SymbolPainter extends CustomPainter {
         canvas.drawPath(
           Path()
             ..moveTo(12, 3)
-            ..lineTo(4, 6)
-            ..lineTo(5, 13)
-            ..quadraticBezierTo(6, 18, 12, 22)
-            ..quadraticBezierTo(18, 18, 19, 13)
-            ..lineTo(20, 6)
-            ..close()
-            ..moveTo(20, 20)
-            ..lineTo(7, 7)
-            ..moveTo(21, 16)
-            ..lineTo(16, 21)
-            ..moveTo(11, 7)
-            ..lineTo(6, 2)
-            ..lineTo(4, 4)
-            ..lineTo(7, 9)
-            ..close()
-            ..moveTo(3, 9)
-            ..lineTo(1, 9)
-            ..moveTo(14, 2)
-            ..lineTo(14, 0),
+            ..lineTo(3, 6)
+            ..lineTo(4, 13)
+            ..quadraticBezierTo(6, 19, 12, 22)
+            ..quadraticBezierTo(18, 19, 20, 13)
+            ..lineTo(21, 6)
+            ..close(),
           stroke,
         );
+        break;
+      case OnscreenGamepadButtonIcon.grapple:
+        canvas.drawPath(
+          Path()
+            ..moveTo(17.657, 17.657)
+            ..lineTo(5.636, 5.636)
+            ..moveTo(5.636, 9.879)
+            ..lineTo(5.636, 5.636)
+            ..lineTo(9.879, 5.636)
+            ..moveTo(12.707, 12.707)
+            ..quadraticBezierTo(7.757, 17.657, 2.808, 12.707)
+            ..lineTo(2.808, 15.536)
+            ..moveTo(12.707, 12.707)
+            ..quadraticBezierTo(17.657, 7.757, 12.707, 2.808)
+            ..lineTo(15.536, 2.808),
+          stroke,
+        );
+        canvas.drawCircle(const Offset(18.364, 18.364), 1.5, stroke);
+        break;
+      case OnscreenGamepadButtonIcon.dart:
+        canvas.drawPath(
+          Path()
+            ..moveTo(12, 2)
+            ..lineTo(14, 8)
+            ..lineTo(22, 12)
+            ..lineTo(16, 14)
+            ..lineTo(12, 22)
+            ..lineTo(10, 16)
+            ..lineTo(2, 12)
+            ..lineTo(8, 10)
+            ..close(),
+          stroke,
+        );
+        canvas.drawCircle(const Offset(12, 12), 2, stroke);
+        break;
+      case OnscreenGamepadButtonIcon.interact:
+        canvas.drawPath(
+          Path()
+            ..moveTo(16, 22)
+            ..lineTo(16, 18)
+            ..quadraticBezierTo(20, 15, 19, 10)
+            ..quadraticBezierTo(18, 7, 14, 7)
+            ..quadraticBezierTo(10, 7, 10, 11)
+            ..lineTo(7, 15)
+            ..lineTo(10, 15)
+            ..lineTo(10, 18)
+            ..lineTo(13, 18)
+            ..lineTo(13, 22)
+            ..moveTo(3, 2)
+            ..lineTo(11, 2)
+            ..quadraticBezierTo(13, 2, 13, 4)
+            ..lineTo(13, 6)
+            ..lineTo(9, 6)
+            ..lineTo(6, 9)
+            ..lineTo(6, 6)
+            ..lineTo(3, 6)
+            ..close(),
+          stroke,
+        );
+        canvas.drawCircle(const Offset(13, 11.5), 0.65, fill);
         break;
       case OnscreenGamepadButtonIcon.medicine:
         canvas.drawPath(

@@ -568,7 +568,7 @@ class _ControlButtonState extends State<_ControlButton>
                 control: control.isCameraStick
                     ? control.copyWith(
                         kind: OnscreenGamepadControlKind.circle,
-                        label: 'R3',
+                        label: control.label == 'RS' ? 'R3' : control.label,
                       )
                     : _autoRunning
                     ? control.copyWith(label: '')

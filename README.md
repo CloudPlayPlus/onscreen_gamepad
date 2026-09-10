@@ -52,7 +52,7 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 鼠标倍率默认 10，范围 1–50。视角 R3 使用普通中号圆形按钮基准，所有控件大小倍率下限 25%。普通按键及视角 R3 可用 `buttonPressMode` 选择 `normal`、`toggle`、`longPressToggle` 或 `slideHold`：普通按压、点击锁定、满半秒松手锁定、滑过按钮后一起按住并随抬指释放。长按仅比较事件时间戳；锁定再点释放，失焦/卸载释放全部持有输入。
 
-`buttonIcon`（JSON `ic`）默认 `text`，也可选择 `runWalk`、`jump`、`crouch`、`prone`、`attack`、`parry`、`medicine`、`menu`、`backpack`、`shoot`、`reload`、`aim`。人物和动作朝左，射击为左上子弹，换弹为缩小子弹配左下/右上弯箭头。内置轻量矢量图案继承前景透明度和尺寸，保持原文字名称与绑定。`runWalk` 在实际按住、锁定或滑动持有时显示奔跑，释放时显示行走。
+`buttonIcon`（JSON `ic`）默认 `text`，也可选择 `runWalk`、`jump`、`crouch`、`prone`、`attack`、`parry`、`grapple`、`dart`、`interact`、`medicine`、`menu`、`backpack`、`shoot`、`reload`、`aim`。人物和动作朝左，射击为左上子弹，换弹为缩小子弹配左下/右上弯箭头；防御是盾牌，钩子是左上抓钩，飞镖为四刃，交互为人脸加对话气泡。内置轻量矢量图案继承前景透明度和尺寸，保持原文字名称与绑定。`runWalk` 在实际按住、锁定或滑动持有时显示奔跑，释放时显示行走。
 
 ```dart
 Stack(
