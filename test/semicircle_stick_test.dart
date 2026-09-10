@@ -444,6 +444,21 @@ void main() {
     },
   );
 
+  testWidgets('unmounted controls ignore the remainder of a captured pointer', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    await mount(tester, events);
+    final pointer = await tester.startGesture(const Offset(340, 460));
+    await pointer.moveBy(const Offset(20, 0));
+    await tester.pumpWidget(const SizedBox.shrink());
+    events.clear();
+    await pointer.moveBy(const Offset(10, 0));
+    await pointer.up();
+    expect(tester.takeException(), isNull);
+    expect(events, isEmpty);
+  });
+
   testWidgets('resize and loss of foreground release movement', (tester) async {
     final events = <OnscreenGamepadEvent>[];
     await mount(tester, events);

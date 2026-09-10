@@ -159,6 +159,8 @@ class _ControlButtonState extends State<_ControlButton>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // 已捕获的 pointer 仍可能向旧命中路径发送 move/up，卸载后不再处理。
+    _activePointer = null;
     super.dispose();
   }
 
