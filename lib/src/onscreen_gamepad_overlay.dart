@@ -12,17 +12,20 @@ const _kStickTapButtonDelay = Duration(milliseconds: 32);
 const _kStickDeadZone = 1.0;
 const _kStickTravel = 40.0;
 
-Rect _interactionRect(OnscreenGamepadPlacedControl placed, Size size) {
-  if (!placed.control.regionTriggerEnabled) {
-    return placed.hitRect;
-  }
+Rect _halfScreenRect(OnscreenGamepadPlacedControl placed, Size size) {
   final left = placed.hitRect.center.dx < size.width / 2;
   return Rect.fromLTWH(
     left ? 0 : size.width / 2,
     0,
     size.width / 2,
     size.height,
-  ).expandToInclude(placed.hitRect);
+  );
+}
+
+Rect _interactionRect(OnscreenGamepadPlacedControl placed, Size size) {
+  return placed.control.regionTriggerEnabled
+      ? _halfScreenRect(placed, size).expandToInclude(placed.hitRect)
+      : placed.hitRect;
 }
 
 typedef OnscreenGamepadControlEvent =
@@ -90,6 +93,12 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                 key: ValueKey('position-${placed.control.id}'),
                 rect: _interactionRect(placed, renderSize),
                 child: _StickHitPriority(
+                  regionRect: placed.control.regionTriggerEnabled
+                      ? _halfScreenRect(
+                          placed,
+                          renderSize,
+                        ).shift(-_interactionRect(placed, renderSize).topLeft)
+                      : null,
                   ownRect: placed.hitRect.shift(
                     -_interactionRect(placed, renderSize).topLeft,
                   ),
@@ -130,16 +139,18 @@ class OnscreenGamepadOverlay extends StatelessWidget {
 // 仅改变起手命中，不裁剪半月，也不影响已捕获指针的 move/up。
 class _StickHitPriority extends SingleChildRenderObjectWidget {
   const _StickHitPriority({
+    required this.regionRect,
     required this.ownRect,
     required this.peerRects,
     required super.child,
   });
   final Rect ownRect;
+  final Rect? regionRect;
   final List<Rect> peerRects;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderStickHitPriority(ownRect, peerRects);
+      _RenderStickHitPriority(ownRect, peerRects, regionRect);
 
   @override
   void updateRenderObject(
@@ -148,19 +159,22 @@ class _StickHitPriority extends SingleChildRenderObjectWidget {
   ) {
     renderObject
       ..ownRect = ownRect
+      ..regionRect = regionRect
       ..peerRects = peerRects;
   }
 }
 
 class _RenderStickHitPriority extends RenderProxyBox {
-  _RenderStickHitPriority(this.ownRect, this.peerRects);
+  _RenderStickHitPriority(this.ownRect, this.peerRects, this.regionRect);
   Rect ownRect;
+  Rect? regionRect;
   List<Rect> peerRects;
 
   @override
   bool hitTest(BoxHitTestResult result, {required Offset position}) {
     if (!ownRect.contains(position) &&
-        peerRects.any((rect) => rect.contains(position))) {
+        ((regionRect != null && !regionRect!.contains(position)) ||
+            peerRects.any((rect) => rect.contains(position)))) {
       return false;
     }
     return super.hitTest(result, position: position);

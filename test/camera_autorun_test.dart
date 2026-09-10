@@ -49,6 +49,43 @@ void main() {
     },
   );
 
+  testWidgets(
+    'cross-center stick bounds do not capture the opposite half gap',
+    (tester) async {
+      for (final (control, x) in [
+        (left, -.1),
+        (right.copyWith(stickMode: OnscreenGamepadStickMode.camera), .1),
+      ]) {
+        final moved = control.copyWith(
+          anchor: OnscreenGamepadAnchor.bottomCenter,
+          offset: Offset(x, 0),
+        );
+        final profile = kOnscreenGamepadXboxProfile.copyWith(controls: [moved]);
+        final placed = const OnscreenGamepadLayoutEngine()
+            .layout(renderSize: const Size(800, 600), profile: profile)
+            .controls
+            .single;
+        expect(placed.hitRect.left, lessThan(400));
+        expect(placed.hitRect.right, greaterThan(400));
+        final oppositeX = x < 0
+            ? placed.hitRect.right - 2
+            : placed.hitRect.left + 2;
+        final events = <OnscreenGamepadEvent>[];
+        await mount(tester, [moved], events);
+        await tester.tapAt(Offset(oppositeX, 50));
+        expect(events, isEmpty);
+        await tester.tapAt(Offset(oppositeX, placed.center.dy));
+        await tester.pump(const Duration(milliseconds: 40));
+        expect(events, isNotEmpty);
+        events.clear();
+        final pointer = await tester.startGesture(Offset(x < 0 ? 20 : 780, 50));
+        await pointer.moveBy(const Offset(10, 0));
+        expect(events.any((e) => e.value != null || e.delta != null), isTrue);
+        await pointer.cancel();
+      }
+    },
+  );
+
   testWidgets('whole half starts above the former 72 percent region', (
     tester,
   ) async {
