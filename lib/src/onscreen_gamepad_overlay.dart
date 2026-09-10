@@ -33,7 +33,7 @@ typedef OnscreenGamepadControlEvent =
 typedef OnscreenGamepadStickEvent =
     void Function(OnscreenGamepadControl control, Offset value);
 
-class OnscreenGamepadOverlay extends StatelessWidget {
+class OnscreenGamepadOverlay extends StatefulWidget {
   const OnscreenGamepadOverlay({
     super.key,
     required this.profile,
@@ -58,6 +58,13 @@ class OnscreenGamepadOverlay extends StatelessWidget {
   final OnscreenGamepadStickEvent? onStickChanged;
 
   @override
+  State<OnscreenGamepadOverlay> createState() => _OnscreenGamepadOverlayState();
+}
+
+class _OnscreenGamepadOverlayState extends State<OnscreenGamepadOverlay> {
+  final _buttons = <String, _ControlButtonState>{};
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -65,30 +72,31 @@ class OnscreenGamepadOverlay extends StatelessWidget {
           math.max(1.0, constraints.maxWidth),
           math.max(1.0, constraints.maxHeight),
         );
-        final result = layoutEngine.layout(
+        final result = widget.layoutEngine.layout(
           renderSize: renderSize,
-          logicalSize: logicalSize,
-          profile: profile,
+          logicalSize: widget.logicalSize,
+          profile: widget.profile,
         );
 
+        final orderedControls = [
+          ...result.controls.where(
+            (p) => p.control.isMovementStick || p.control.isCameraStick,
+          ),
+          ...result.controls.where(
+            (p) => !p.control.isMovementStick && !p.control.isCameraStick,
+          ),
+        ];
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            if (showZones)
+            if (widget.showZones)
               for (final entry in result.zones.entries)
                 Positioned.fromRect(
                   rect: entry.value,
                   child: _ZonePaint(anchor: entry.key),
                 ),
             // 移动摇杆的扩大区域置底，任何普通按钮的 hitbox 都优先响应。
-            for (final placed in [
-              ...result.controls.where(
-                (p) => p.control.isMovementStick || p.control.isCameraStick,
-              ),
-              ...result.controls.where(
-                (p) => !p.control.isMovementStick && !p.control.isCameraStick,
-              ),
-            ])
+            for (final placed in orderedControls)
               Positioned.fromRect(
                 key: ValueKey('position-${placed.control.id}'),
                 rect: _interactionRect(placed, renderSize),
@@ -115,17 +123,23 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                   child: _ControlButton(
                     key: ValueKey(placed.control.id),
                     placed: placed,
+                    buttonStates: _buttons,
+                    buttonOrder: orderedControls
+                        .map((p) => p.control.id)
+                        .toList(),
                     renderSize: renderSize,
                     interactionRect: _interactionRect(placed, renderSize),
                     feedbackCenter:
                         placed.positionFeedbackCenter(renderSize) -
                         _interactionRect(placed, renderSize).topLeft,
-                    profile: profile,
-                    isActive: activeControlIds.contains(placed.control.id),
-                    onEvent: onEvent,
-                    onDown: onControlDown,
-                    onUp: onControlUp,
-                    onStickChanged: onStickChanged,
+                    profile: widget.profile,
+                    isActive: widget.activeControlIds.contains(
+                      placed.control.id,
+                    ),
+                    onEvent: widget.onEvent,
+                    onDown: widget.onControlDown,
+                    onUp: widget.onControlUp,
+                    onStickChanged: widget.onStickChanged,
                   ),
                 ),
               ),
@@ -225,6 +239,8 @@ class _ControlButton extends StatefulWidget {
   const _ControlButton({
     super.key,
     required this.placed,
+    required this.buttonStates,
+    required this.buttonOrder,
     required this.renderSize,
     required this.interactionRect,
     required this.feedbackCenter,
@@ -237,6 +253,8 @@ class _ControlButton extends StatefulWidget {
   });
 
   final OnscreenGamepadPlacedControl placed;
+  final Map<String, _ControlButtonState> buttonStates;
+  final List<String> buttonOrder;
   final Size renderSize;
   final Rect interactionRect;
   final Offset feedbackCenter;
@@ -262,17 +280,28 @@ class _ControlButtonState extends State<_ControlButton>
   bool _stickTapCandidate = false;
   Offset? _lastPointerPosition;
   bool _isToggled = false;
+  bool _buttonDown = false;
+  bool _buttonOutputDown = false;
+  final _slideHolders = <_ControlButtonState>{};
+  final _slideTargets = <_ControlButtonState>{};
+  bool _buttonLocked = false;
+  bool _unlockGesture = false;
+  Duration? _buttonDownTime;
   int _mouseModeIndex = 0;
   final _pendingStickButtonUps = <VoidCallback>{};
 
   @override
   void initState() {
     super.initState();
+    widget.buttonStates[widget.placed.control.id] = this;
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    if (widget.buttonStates[widget.placed.control.id] == this) {
+      widget.buttonStates.remove(widget.placed.control.id);
+    }
     WidgetsBinding.instance.removeObserver(this);
     _cancelInput(widget, afterFrame: true);
     super.dispose();
@@ -285,6 +314,7 @@ class _ControlButtonState extends State<_ControlButton>
             _cameraButtonPointer != null ||
             _autoRunning ||
             _isToggled ||
+            _buttonOutputDown ||
             _pendingStickButtonUps.isNotEmpty)) {
       _cancelInput(widget);
       setState(() {});
@@ -294,7 +324,16 @@ class _ControlButtonState extends State<_ControlButton>
   @override
   void didUpdateWidget(covariant _ControlButton oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.placed.control.id != widget.placed.control.id) {
+      oldWidget.buttonStates.remove(oldWidget.placed.control.id);
+      widget.buttonStates[widget.placed.control.id] = this;
+    }
     if (oldWidget.placed.control.id != widget.placed.control.id ||
+        oldWidget.placed.control.buttonPressMode !=
+            widget.placed.control.buttonPressMode ||
+        oldWidget.placed.control.input != widget.placed.control.input ||
+        oldWidget.placed.control.behavior != widget.placed.control.behavior ||
+        oldWidget.placed.control.kind != widget.placed.control.kind ||
         oldWidget.placed.control.isCameraStick !=
             widget.placed.control.isCameraStick ||
         oldWidget.placed.control.stickMode != widget.placed.control.stickMode ||
@@ -314,12 +353,15 @@ class _ControlButtonState extends State<_ControlButton>
 
   void _cancelInput(_ControlButton source, {bool afterFrame = false}) {
     final control = source.placed.control;
-    final cameraButtonDown = _cameraButtonPointer != null;
-    final active = switch (control.behavior) {
-      OnscreenGamepadControlBehavior.toggle => _isToggled,
-      OnscreenGamepadControlBehavior.mouseModeCycle => false,
-      _ => _activePointer != null || _autoRunning,
-    };
+    _releaseSlideTargets(afterFrame: afterFrame);
+    final buttonDown = _buttonOutputDown;
+    final active = control.supportsButtonPressMode
+        ? false
+        : switch (control.behavior) {
+            OnscreenGamepadControlBehavior.toggle => _isToggled,
+            OnscreenGamepadControlBehavior.mouseModeCycle => false,
+            _ => _activePointer != null || _autoRunning,
+          };
     final wasMoving = _stickValue != Offset.zero;
     final pendingStickButtonUps = _pendingStickButtonUps.toList();
     // 先清除本地手势，旧命中路径后续的 move/up 不得再次输出。
@@ -332,16 +374,19 @@ class _ControlButtonState extends State<_ControlButton>
     _stickTapCandidate = false;
     _lastPointerPosition = null;
     _isToggled = false;
-    if (!active &&
-        !wasMoving &&
-        !cameraButtonDown &&
-        pendingStickButtonUps.isEmpty) {
+    _buttonDown = false;
+    _buttonOutputDown = false;
+    _slideHolders.clear();
+    _buttonLocked = false;
+    _buttonDownTime = null;
+    _unlockGesture = false;
+    if (!active && !wasMoving && !buttonDown && pendingStickButtonUps.isEmpty) {
       return;
     }
 
     void release() {
-      if (cameraButtonDown) {
-        _emitCameraButton(source, OnscreenGamepadEventPhase.up);
+      if (buttonDown) {
+        _emitButtonPhase(source, OnscreenGamepadEventPhase.up);
       }
       for (final up in pendingStickButtonUps) {
         up();
@@ -387,7 +432,7 @@ class _ControlButtonState extends State<_ControlButton>
     final global =
         center +
         widget.interactionRect.topLeft -
-        Offset(0, widget.placed.visualSize * .34 + 56);
+        Offset(0, widget.placed.visualSize * .34 + 100);
     final marginX = math.min(24.0, widget.renderSize.width / 2);
     final marginY = math.min(24.0, widget.renderSize.height / 2);
     return Offset(
@@ -418,8 +463,8 @@ class _ControlButtonState extends State<_ControlButton>
     final activeColor = _withOpacity(activeBaseColor, backgroundOpacity);
     final isActive =
         widget.isActive ||
-        (control.isCameraStick
-            ? _cameraButtonPointer != null
+        (control.supportsButtonPressMode
+            ? _buttonOutputDown
             : _activePointer != null) ||
         _isToggled;
     final fillColor = isActive ? activeColor : color;
@@ -574,7 +619,7 @@ class _ControlButtonState extends State<_ControlButton>
       if (inButton) {
         if (_cameraButtonPointer != null) return;
         setState(() => _cameraButtonPointer = event.pointer);
-        _emitCameraButton(widget, OnscreenGamepadEventPhase.down);
+        _pressButton(event.timeStamp);
       } else if (_activePointer == null) {
         _activePointer = event.pointer;
         _lastPointerPosition = event.localPosition;
@@ -591,6 +636,10 @@ class _ControlButtonState extends State<_ControlButton>
       _lastPointerPosition = event.localPosition;
     });
     final control = widget.placed.control;
+    if (control.supportsButtonPressMode) {
+      _pressButton(event.timeStamp);
+      return;
+    }
     if (control.behavior == OnscreenGamepadControlBehavior.toggle) {
       _setToggled(!_isToggled);
       return;
@@ -607,10 +656,15 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
+    if (event.pointer == _cameraButtonPointer) {
+      _trackSlideTargets(event.position);
+      return;
+    }
     if (event.pointer != _activePointer) {
       return;
     }
     final control = widget.placed.control;
+    if (!control.isCameraStick) _trackSlideTargets(event.position);
     if (control.isCameraStick) {
       final delta =
           (event.localPosition - _lastPointerPosition!) *
@@ -632,8 +686,16 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _handlePointerUp(PointerUpEvent event) {
-    if (_releaseCameraPointer(event.pointer)) return;
+    if (_releaseCameraPointer(event.pointer, event.timeStamp)) return;
     if (event.pointer != _activePointer) {
+      return;
+    }
+    if (widget.placed.control.supportsButtonPressMode) {
+      _releaseButton(event.timeStamp);
+      setState(() {
+        _activePointer = null;
+        _lastPointerPosition = null;
+      });
       return;
     }
     if (_isStick(widget.placed.control)) _updateStick(event.localPosition);
@@ -641,11 +703,129 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _handlePointerCancel(PointerCancelEvent event) {
-    if (_releaseCameraPointer(event.pointer)) return;
+    if (_releaseCameraPointer(event.pointer, event.timeStamp, canceled: true)) {
+      return;
+    }
     if (event.pointer != _activePointer) {
       return;
     }
-    _releasePointer(allowStickTap: false);
+    if (widget.placed.control.supportsButtonPressMode) {
+      _releaseButton(event.timeStamp, canceled: true);
+      setState(() {
+        _activePointer = null;
+        _lastPointerPosition = null;
+      });
+    } else {
+      _releasePointer(allowStickTap: false);
+    }
+  }
+
+  void _emitButtonPhase(
+    _ControlButton source,
+    OnscreenGamepadEventPhase phase,
+  ) {
+    if (source.placed.control.isCameraStick) {
+      _emitCameraButton(source, phase);
+    } else {
+      source.onEvent?.call(
+        OnscreenGamepadEvent.control(
+          control: source.placed.control,
+          phase: phase,
+        ),
+      );
+      if (phase == OnscreenGamepadEventPhase.down) {
+        source.onDown?.call(source.placed.control);
+      } else {
+        source.onUp?.call(source.placed.control);
+      }
+    }
+  }
+
+  void _setButtonDown(bool down) {
+    if (_buttonDown == down) return;
+    setState(() => _buttonDown = down);
+    _syncButtonOutput();
+  }
+
+  void _syncButtonOutput({bool afterFrame = false}) {
+    final down = _buttonDown || _slideHolders.isNotEmpty;
+    if (_buttonOutputDown == down) return;
+    _buttonOutputDown = down;
+    final source = widget;
+    void emit() => _emitButtonPhase(
+      source,
+      down ? OnscreenGamepadEventPhase.down : OnscreenGamepadEventPhase.up,
+    );
+    if (afterFrame) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => emit());
+    } else {
+      if (mounted) setState(() {});
+      emit();
+    }
+  }
+
+  void _trackSlideTargets(Offset globalPosition) {
+    if (widget.placed.control.buttonPressMode !=
+            OnscreenGamepadButtonPressMode.slideHold ||
+        !_buttonDown) {
+      return;
+    }
+    // 按绘制顺序命中原按钮框，扩大区域和摇杆不参与滑动连按。
+    for (final id in widget.buttonOrder.reversed) {
+      final target = widget.buttonStates[id];
+      if (target == null || !target.mounted) continue;
+      final box = target.context.findRenderObject() as RenderBox;
+      if (!target.widget.placed.hitRect
+          .shift(-target.widget.interactionRect.topLeft)
+          .contains(box.globalToLocal(globalPosition))) {
+        continue;
+      }
+      if (target != this &&
+          target.widget.placed.control.supportsButtonPressMode &&
+          _slideTargets.add(target)) {
+        target._slideHolders.add(this);
+        target._syncButtonOutput();
+      }
+      return;
+    }
+  }
+
+  void _releaseSlideTargets({bool afterFrame = false}) {
+    for (final target in _slideTargets) {
+      if (target._slideHolders.remove(this)) {
+        target._syncButtonOutput(afterFrame: afterFrame);
+      }
+    }
+    _slideTargets.clear();
+  }
+
+  void _pressButton(Duration timeStamp) {
+    _buttonDownTime = timeStamp;
+    _unlockGesture = _buttonLocked;
+    final mode = widget.placed.control.buttonPressMode;
+    if (_buttonLocked) {
+      _buttonLocked = false;
+      _setButtonDown(false);
+    } else {
+      _buttonLocked = mode == OnscreenGamepadButtonPressMode.toggle;
+      _setButtonDown(true);
+    }
+  }
+
+  void _releaseButton(Duration timeStamp, {bool canceled = false}) {
+    _releaseSlideTargets();
+    final mode = widget.placed.control.buttonPressMode;
+    if (canceled) {
+      _buttonLocked = false;
+    } else if (mode == OnscreenGamepadButtonPressMode.longPressToggle) {
+      _buttonLocked =
+          !_unlockGesture &&
+          _buttonDownTime != null &&
+          timeStamp - _buttonDownTime! >= const Duration(milliseconds: 500);
+    }
+    if (!_buttonLocked) _setButtonDown(false);
+    _buttonDownTime = null;
+    _unlockGesture = false;
   }
 
   void _emitCameraButton(
@@ -664,11 +844,15 @@ class _ControlButtonState extends State<_ControlButton>
     );
   }
 
-  bool _releaseCameraPointer(int pointer) {
+  bool _releaseCameraPointer(
+    int pointer,
+    Duration timeStamp, {
+    bool canceled = false,
+  }) {
     if (!widget.placed.control.isCameraStick) return false;
     if (pointer == _cameraButtonPointer) {
       setState(() => _cameraButtonPointer = null);
-      _emitCameraButton(widget, OnscreenGamepadEventPhase.up);
+      _releaseButton(timeStamp, canceled: canceled);
     }
     if (pointer == _activePointer) {
       _activePointer = null;
@@ -993,7 +1177,7 @@ class _ControlVisual extends StatelessWidget {
                     softWrap: false,
                     style: TextStyle(
                       color: foreground,
-                      fontSize: math.max(11, size * 0.25),
+                      fontSize: math.min(size * .5, math.max(11, size * 0.25)),
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
                     ),

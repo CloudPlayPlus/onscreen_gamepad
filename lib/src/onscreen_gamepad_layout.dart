@@ -209,12 +209,14 @@ class OnscreenGamepadLayoutEngine {
     required OnscreenGamepadZoneMetrics metrics,
   }) {
     final rule =
-        sizeRules[control.sizeTier] ??
+        sizeRules[control.isCameraStick
+            ? OnscreenGamepadSizeTier.medium
+            : control.sizeTier] ??
         kOnscreenGamepadDefaultSizeRules[OnscreenGamepadSizeTier.medium]!;
     final shortSide = math.min(logicalSize.width, logicalSize.height);
     final wideScale = 0.88 + 0.18 * metrics.wideShare;
     final base = _clamp(shortSide * rule.ratio * wideScale, rule.min, rule.max);
-    final sizeScale = _clamp(control.sizeScale, 0.8, 1.5);
+    final sizeScale = _clamp(control.sizeScale, 0.25, 1.5);
     return base * sizeScale;
   }
 }

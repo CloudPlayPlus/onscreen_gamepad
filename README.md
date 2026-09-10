@@ -50,6 +50,8 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆默认还接收所在完整半屏的空白区域，设置 `regionTrigger: false` 后仅在原命中框起手。右摇杆可切为 `stickMode: OnscreenGamepadStickMode.camera`，强制半屏鼠标视角转动，本体仅作 R3；`mouseSensitivity` 调整倍率。移动摇杆的 `autoRun` 默认开启，向上推至奔跑提示附近松手锁定，再次触碰解除。所有有效起手范围之外继续落到下层视频。
 
+鼠标倍率默认 10，范围 1–50。视角 R3 使用普通中号圆形按钮基准，所有控件大小倍率下限 25%。普通按键及视角 R3 可用 `buttonPressMode` 选择 `normal`、`toggle`、`longPressToggle` 或 `slideHold`：普通按压、点击锁定、满半秒松手锁定、滑过按钮后一起按住并随抬指释放。长按仅比较事件时间戳；锁定再点释放，失焦/卸载释放全部持有输入。
+
 ```dart
 Stack(
   children: [

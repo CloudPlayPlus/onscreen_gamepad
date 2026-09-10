@@ -10,6 +10,16 @@ enum OnscreenGamepadAnchor {
 
 enum OnscreenGamepadControlKind { circle, square, stick }
 
+enum OnscreenGamepadButtonPressMode {
+  normal('普通'),
+  toggle('点击锁定'),
+  longPressToggle('长按锁定'),
+  slideHold('滑动连按');
+
+  const OnscreenGamepadButtonPressMode(this.label);
+  final String label;
+}
+
 enum OnscreenGamepadStickMode {
   joystick('摇杆'),
   camera('视角转动');
@@ -226,12 +236,13 @@ class OnscreenGamepadControl {
     required this.input,
     this.behavior = OnscreenGamepadControlBehavior.normal,
     this.behaviorConfig = const {},
+    this.buttonPressMode = OnscreenGamepadButtonPressMode.normal,
     this.positionFeedback,
     this.positionFeedbackLocation,
     this.stickCenterMode = OnscreenGamepadStickCenterMode.touchDown,
     this.regionTrigger = true,
     this.stickMode = OnscreenGamepadStickMode.joystick,
-    this.mouseSensitivity = 1,
+    this.mouseSensitivity = 10,
     this.autoRun = true,
     this.sizeScale = 1,
     this.color,
@@ -248,6 +259,16 @@ class OnscreenGamepadControl {
   final OnscreenGamepadInput input;
   final OnscreenGamepadControlBehavior behavior;
   final Map<String, Object?> behaviorConfig;
+
+  final OnscreenGamepadButtonPressMode buttonPressMode;
+  bool get supportsButtonPressMode =>
+      isCameraStick ||
+      (kind != OnscreenGamepadControlKind.stick &&
+          behavior != OnscreenGamepadControlBehavior.toggle &&
+          behavior != OnscreenGamepadControlBehavior.mouseModeCycle &&
+          (input.kind == OnscreenGamepadInputKind.gamepadButton ||
+              input.kind == OnscreenGamepadInputKind.keyboardKey ||
+              input.kind == OnscreenGamepadInputKind.mouseButton));
 
   /// Optional per-control preference; absent values use the input's default.
   final bool? positionFeedback;
@@ -269,7 +290,7 @@ class OnscreenGamepadControl {
       isCameraStick || (isMovementStick && regionTrigger);
   bool get autoRunEnabled => isMovementStick && !isCameraStick && autoRun;
   double get effectiveMouseSensitivity =>
-      mouseSensitivity.isFinite ? mouseSensitivity.clamp(.1, 5) : 1;
+      mouseSensitivity.isFinite ? mouseSensitivity.clamp(1, 50) : 10;
 
   bool get isMovementStick =>
       kind == OnscreenGamepadControlKind.stick &&
@@ -299,6 +320,7 @@ class OnscreenGamepadControl {
     OnscreenGamepadInput? input,
     OnscreenGamepadControlBehavior? behavior,
     Map<String, Object?>? behaviorConfig,
+    OnscreenGamepadButtonPressMode? buttonPressMode,
     bool? positionFeedback,
     Offset? positionFeedbackLocation,
     OnscreenGamepadStickCenterMode? stickCenterMode,
@@ -321,6 +343,7 @@ class OnscreenGamepadControl {
       input: input ?? this.input,
       behavior: behavior ?? this.behavior,
       behaviorConfig: behaviorConfig ?? this.behaviorConfig,
+      buttonPressMode: buttonPressMode ?? this.buttonPressMode,
       positionFeedback: positionFeedback ?? this.positionFeedback,
       positionFeedbackLocation:
           positionFeedbackLocation ?? this.positionFeedbackLocation,
@@ -348,10 +371,12 @@ class OnscreenGamepadControl {
       if (behavior != OnscreenGamepadControlBehavior.normal)
         'bh': behavior.name,
       if (behaviorConfig.isNotEmpty) 'bc': behaviorConfig,
+      if (buttonPressMode != OnscreenGamepadButtonPressMode.normal)
+        'pm': buttonPressMode.name,
       if (positionFeedback != null) 'af': positionFeedback,
       if (!regionTrigger) 'rt': false,
       if (stickMode != OnscreenGamepadStickMode.joystick) 'sm': stickMode.name,
-      if (mouseSensitivity != 1) 'ms': effectiveMouseSensitivity,
+      if (mouseSensitivity != 10) 'ms': effectiveMouseSensitivity,
       if (!autoRun) 'ar': false,
       if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
         'cm': stickCenterMode.name,
@@ -395,6 +420,11 @@ class OnscreenGamepadControl {
         OnscreenGamepadControlBehavior.normal,
       ),
       behaviorConfig: _map(json['bc']),
+      buttonPressMode: _enumByName(
+        OnscreenGamepadButtonPressMode.values,
+        json['pm'],
+        OnscreenGamepadButtonPressMode.normal,
+      ),
       positionFeedback: json['af'] is bool ? json['af'] as bool : null,
       regionTrigger: json['rt'] is bool ? json['rt'] as bool : true,
       stickMode: _enumByName(
@@ -402,7 +432,7 @@ class OnscreenGamepadControl {
         json['sm'],
         OnscreenGamepadStickMode.joystick,
       ),
-      mouseSensitivity: _double(json['ms'], 1),
+      mouseSensitivity: _double(json['ms'], 10),
       autoRun: json['ar'] is bool ? json['ar'] as bool : true,
       stickCenterMode: _enumByName(
         OnscreenGamepadStickCenterMode.values,

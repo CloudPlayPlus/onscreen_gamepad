@@ -30,6 +30,19 @@ void main() {
   test(
     'camera mode forces region and persists speed and auto run settings',
     () {
+      expect(right.effectiveMouseSensitivity, 10);
+      expect(
+        OnscreenGamepadControl.fromJson(right.toJson()).mouseSensitivity,
+        10,
+      );
+      expect(
+        right.copyWith(mouseSensitivity: 50).effectiveMouseSensitivity,
+        50,
+      );
+      expect(
+        right.copyWith(mouseSensitivity: 100).effectiveMouseSensitivity,
+        50,
+      );
       final configured = right.copyWith(
         stickMode: OnscreenGamepadStickMode.camera,
         regionTrigger: false,
@@ -48,6 +61,32 @@ void main() {
       expect(right.autoRunEnabled, isFalse);
     },
   );
+
+  test('camera R3 uses ordinary button size and allows quarter scale', () {
+    final button = kOnscreenGamepadXboxProfile.controls.firstWhere(
+      (c) => c.id == 'a',
+    );
+    OnscreenGamepadPlacedControl placed(OnscreenGamepadControl control) =>
+        const OnscreenGamepadLayoutEngine()
+            .layout(
+              renderSize: const Size(800, 600),
+              profile: kOnscreenGamepadXboxProfile.copyWith(
+                controls: [control],
+              ),
+            )
+            .controls
+            .single;
+    final camera = placed(
+      right.copyWith(stickMode: OnscreenGamepadStickMode.camera),
+    );
+    final ordinary = placed(button.copyWith(sizeScale: right.sizeScale));
+    expect(camera.hitSize, ordinary.hitSize);
+    expect(camera.visualSize, ordinary.visualSize);
+    expect(camera.hitSize, lessThan(placed(right).hitSize));
+    final small = placed(button.copyWith(sizeScale: .25));
+    expect(small.hitSize, closeTo(placed(button).hitSize * .25, 1));
+    expect(small.visualSize, closeTo(placed(button).visualSize * .25, 1));
+  });
 
   testWidgets(
     'cross-center stick bounds do not capture the opposite half gap',
