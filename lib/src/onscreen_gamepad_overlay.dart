@@ -763,7 +763,10 @@ class _ControlButtonState extends State<_ControlButton>
       down ? OnscreenGamepadEventPhase.down : OnscreenGamepadEventPhase.up,
     );
     if (afterFrame) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => emit());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+        emit();
+      });
     } else {
       if (mounted) setState(() {});
       emit();

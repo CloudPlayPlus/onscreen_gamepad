@@ -314,6 +314,45 @@ void main() {
     },
   );
 
+  testWidgets('removing slide source refreshes surviving target icon', (
+    tester,
+  ) async {
+    final source = button.copyWith(
+      buttonPressMode: OnscreenGamepadButtonPressMode.slideHold,
+    );
+    final target = button.copyWith(
+      id: 'b',
+      label: 'B',
+      anchor: OnscreenGamepadAnchor.topLeft,
+      offset: Offset.zero,
+      buttonIcon: OnscreenGamepadButtonIcon.runWalk,
+    );
+    final events = <OnscreenGamepadEvent>[];
+    Widget overlay(List<OnscreenGamepadControl> controls) => Directionality(
+      textDirection: TextDirection.ltr,
+      child: OnscreenGamepadOverlay(
+        profile: kOnscreenGamepadXboxProfile.copyWith(controls: controls),
+        onEvent: events.add,
+      ),
+    );
+    // 目标先重建，来源随后卸载，确保覆盖延迟释放的绘制顺序。
+    await tester.pumpWidget(overlay([target, source]));
+    final symbol = find.byType(OnscreenGamepadButtonSymbol);
+    final finger = await tester.startGesture(tester.getCenter(find.text('A')));
+    await finger.moveTo(tester.getCenter(symbol));
+    await tester.pump();
+    expect(tester.widget<OnscreenGamepadButtonSymbol>(symbol).isActive, isTrue);
+    await tester.pumpWidget(overlay([target]));
+    await tester.pump();
+    expect(
+      tester.widget<OnscreenGamepadButtonSymbol>(symbol).isActive,
+      isFalse,
+    );
+    expect(events.where((e) => e.control.id == 'b' && e.isUp), hasLength(1));
+    await finger.up();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('camera R3 forwards button phases to compatibility callbacks', (
     tester,
   ) async {
