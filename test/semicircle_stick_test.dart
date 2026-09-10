@@ -206,6 +206,47 @@ void main() {
     },
   );
 
+  testWidgets(
+    'fixed center off-center taps retain L3 and R3 but drags do not',
+    (tester) async {
+      for (final control in [stick, rightStick]) {
+        final selected = profile.copyWith(
+          controls: [
+            control.copyWith(
+              stickCenterMode: OnscreenGamepadStickCenterMode.fixed,
+            ),
+          ],
+        );
+        final events = <OnscreenGamepadEvent>[];
+        await mount(tester, events, customProfile: selected);
+        final center = const OnscreenGamepadLayoutEngine()
+            .layout(renderSize: const Size(800, 600), profile: selected)
+            .controls
+            .single
+            .center;
+        await tester.tapAt(center + const Offset(15, 0));
+        await tester.pump(const Duration(milliseconds: 40));
+        final buttonEvents = events
+            .where((e) => e.type == OnscreenGamepadEventType.gamepadButton)
+            .toList();
+        expect(buttonEvents.map((e) => e.phase), [
+          OnscreenGamepadEventPhase.down,
+          OnscreenGamepadEventPhase.up,
+        ]);
+        expect(buttonEvents.first.input.code, control.input.buttonCode);
+        events.clear();
+        final pointer = await tester.startGesture(center + const Offset(15, 0));
+        await pointer.moveBy(const Offset(5, 0));
+        await pointer.up();
+        await tester.pump(const Duration(milliseconds: 40));
+        expect(
+          events.where((e) => e.type == OnscreenGamepadEventType.gamepadButton),
+          isEmpty,
+        );
+      }
+    },
+  );
+
   test('stick center mode defaults and survives JSON and copying', () {
     expect(stick.stickCenterMode, OnscreenGamepadStickCenterMode.touchDown);
     for (final mode in OnscreenGamepadStickCenterMode.values) {

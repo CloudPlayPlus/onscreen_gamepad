@@ -139,6 +139,7 @@ class _ControlButtonState extends State<_ControlButton>
   int? _activePointer;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
+  Offset? _stickTouchDown;
   bool _stickTapCandidate = false;
   Offset? _lastPointerPosition;
   bool _isToggled = false;
@@ -197,6 +198,7 @@ class _ControlButtonState extends State<_ControlButton>
     _activePointer = null;
     _stickValue = Offset.zero;
     _stickOrigin = null;
+    _stickTouchDown = null;
     _stickTapCandidate = false;
     _lastPointerPosition = null;
     _isToggled = false;
@@ -436,12 +438,14 @@ class _ControlButtonState extends State<_ControlButton>
     setState(() {
       _activePointer = null;
       _stickOrigin = null;
+      _stickTouchDown = null;
       _stickTapCandidate = false;
       _lastPointerPosition = null;
     });
   }
 
   void _beginStick(Offset localPosition) {
+    _stickTouchDown = localPosition;
     _stickOrigin =
         widget.placed.control.stickCenterMode ==
             OnscreenGamepadStickCenterMode.fixed
@@ -461,7 +465,8 @@ class _ControlButtonState extends State<_ControlButton>
     final origin = _stickOrigin!;
     final delta = localPosition - origin;
     final distance = delta.distance;
-    if (distance > widget.placed.hitSize / 2 * _kStickTapThresholdRatio) {
+    if ((localPosition - _stickTouchDown!).distance >
+        widget.placed.hitSize / 2 * _kStickTapThresholdRatio) {
       _stickTapCandidate = false;
     }
     final force =
