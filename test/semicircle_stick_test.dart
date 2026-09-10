@@ -124,6 +124,88 @@ void main() {
     );
   }
 
+  test('region trigger defaults on and preserves explicit choices', () {
+    expect(stick.regionTrigger, isTrue);
+    expect(stick.isMovementStick, isTrue);
+    expect(rightStick.isMovementStick, isFalse);
+    expect(
+      rightStick
+          .copyWith(behavior: OnscreenGamepadControlBehavior.wasdStick)
+          .isMovementStick,
+      isTrue,
+    );
+    for (final enabled in [false, true]) {
+      final restored = OnscreenGamepadControl.fromJson(
+        stick.copyWith(regionTrigger: enabled).toJson(),
+      ).copyWith(input: rightStick.input);
+      expect(restored.regionTrigger, enabled);
+    }
+    expect(
+      OnscreenGamepadControl.fromJson(stick.toJson()).regionTrigger,
+      isTrue,
+    );
+  });
+
+  testWidgets('region trigger controls blank starts in both center modes', (
+    tester,
+  ) async {
+    for (final mode in OnscreenGamepadStickCenterMode.values) {
+      for (final enabled in [false, true]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        final selected = profile.copyWith(
+          controls: [
+            stick.copyWith(stickCenterMode: mode, regionTrigger: enabled),
+          ],
+        );
+        final events = <OnscreenGamepadEvent>[];
+        await mount(tester, events, customProfile: selected);
+        final pointer = await tester.startGesture(const Offset(340, 460));
+        await pointer.moveBy(const Offset(40, 0));
+        expect(
+          events.any((e) => e.value != null && e.value != Offset.zero),
+          enabled,
+        );
+        await pointer.up();
+        await tester.pump();
+        events.clear();
+        final center = const OnscreenGamepadLayoutEngine()
+            .layout(renderSize: const Size(800, 600), profile: selected)
+            .controls
+            .single
+            .center;
+        final original = await tester.startGesture(center);
+        await original.moveBy(const Offset(150, 0));
+        expect(events.last.value, const Offset(1, 0));
+        await original.up();
+        await tester.pump();
+      }
+    }
+  });
+
+  testWidgets(
+    'changing region trigger releases input and ignores the old pointer',
+    (tester) async {
+      final events = <OnscreenGamepadEvent>[];
+      await mount(tester, events);
+      final pointer = await tester.startGesture(const Offset(340, 460));
+      await pointer.moveBy(const Offset(40, 0));
+      expect(events.last.value, const Offset(1, 0));
+      await mount(
+        tester,
+        events,
+        customProfile: profile.copyWith(
+          controls: [button, stick.copyWith(regionTrigger: false)],
+        ),
+      );
+      expect(events.where((e) => e.value != null).last.value, Offset.zero);
+      final count = events.length;
+      await pointer.moveBy(const Offset(40, 0));
+      await pointer.up();
+      await tester.pump();
+      expect(events.length, count);
+    },
+  );
+
   test('stick center mode defaults and survives JSON and copying', () {
     expect(stick.stickCenterMode, OnscreenGamepadStickCenterMode.touchDown);
     for (final mode in OnscreenGamepadStickCenterMode.values) {

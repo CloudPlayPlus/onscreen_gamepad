@@ -11,16 +11,10 @@ const _kStickTapButtonDelay = Duration(milliseconds: 32);
 const _kStickDeadZone = 1.0;
 const _kStickTravel = 40.0;
 
-bool _isMovementStick(OnscreenGamepadControl control) {
-  return control.kind == OnscreenGamepadControlKind.stick &&
-      (control.behavior == OnscreenGamepadControlBehavior.wasdStick ||
-          control.input.code == 'wasdStick' ||
-          control.input.code == 'leftStick' ||
-          control.input.xAxis == 'leftX');
-}
-
 Rect _interactionRect(OnscreenGamepadPlacedControl placed, Size size) {
-  if (!_isMovementStick(placed.control)) return placed.hitRect;
+  if (!placed.control.isMovementStick || !placed.control.regionTrigger) {
+    return placed.hitRect;
+  }
   final left = placed.hitRect.center.dx < size.width / 2;
   return Rect.fromLTWH(
     left ? 0 : size.width / 2,
@@ -84,8 +78,8 @@ class OnscreenGamepadOverlay extends StatelessWidget {
                 ),
             // 移动摇杆的扩大区域置底，任何普通按钮的 hitbox 都优先响应。
             for (final placed in [
-              ...result.controls.where((p) => _isMovementStick(p.control)),
-              ...result.controls.where((p) => !_isMovementStick(p.control)),
+              ...result.controls.where((p) => p.control.isMovementStick),
+              ...result.controls.where((p) => !p.control.isMovementStick),
             ])
               Positioned.fromRect(
                 key: ValueKey('position-${placed.control.id}'),
@@ -181,6 +175,8 @@ class _ControlButtonState extends State<_ControlButton>
     if (oldWidget.placed.control.id != widget.placed.control.id ||
         oldWidget.placed.control.stickCenterMode !=
             widget.placed.control.stickCenterMode ||
+        oldWidget.placed.control.regionTrigger !=
+            widget.placed.control.regionTrigger ||
         oldWidget.interactionRect != widget.interactionRect ||
         oldWidget.placed.hitRect != widget.placed.hitRect ||
         oldWidget.placed.visualSize != widget.placed.visualSize) {

@@ -221,6 +221,7 @@ class OnscreenGamepadControl {
     this.positionFeedback,
     this.positionFeedbackLocation,
     this.stickCenterMode = OnscreenGamepadStickCenterMode.touchDown,
+    this.regionTrigger = true,
     this.sizeScale = 1,
     this.color,
     this.sortOrder = 0,
@@ -243,15 +244,19 @@ class OnscreenGamepadControl {
   /// 提示中心在屏幕宽高中的比例，未设置时使用摇杆上方的默认位置。
   final Offset? positionFeedbackLocation;
   final OnscreenGamepadStickCenterMode stickCenterMode;
+  final bool regionTrigger;
+
+  bool get isMovementStick =>
+      kind == OnscreenGamepadControlKind.stick &&
+      (behavior == OnscreenGamepadControlBehavior.wasdStick ||
+          input.code == 'wasdStick' ||
+          input.code == 'leftStick' ||
+          input.xAxis == 'leftX');
 
   bool get positionFeedbackEnabled =>
       kind == OnscreenGamepadControlKind.stick &&
       stickCenterMode == OnscreenGamepadStickCenterMode.fixed &&
-      (positionFeedback ??
-          (behavior == OnscreenGamepadControlBehavior.wasdStick ||
-              input.code == 'wasdStick' ||
-              input.code == 'leftStick' ||
-              input.xAxis == 'leftX'));
+      (positionFeedback ?? isMovementStick);
 
   final double sizeScale;
   final Color? color;
@@ -271,6 +276,7 @@ class OnscreenGamepadControl {
     bool? positionFeedback,
     Offset? positionFeedbackLocation,
     OnscreenGamepadStickCenterMode? stickCenterMode,
+    bool? regionTrigger,
     double? sizeScale,
     Color? color,
     int? sortOrder,
@@ -290,6 +296,7 @@ class OnscreenGamepadControl {
       positionFeedbackLocation:
           positionFeedbackLocation ?? this.positionFeedbackLocation,
       stickCenterMode: stickCenterMode ?? this.stickCenterMode,
+      regionTrigger: regionTrigger ?? this.regionTrigger,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -310,6 +317,7 @@ class OnscreenGamepadControl {
         'bh': behavior.name,
       if (behaviorConfig.isNotEmpty) 'bc': behaviorConfig,
       if (positionFeedback != null) 'af': positionFeedback,
+      if (!regionTrigger) 'rt': false,
       if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
         'cm': stickCenterMode.name,
       if (positionFeedbackLocation != null)
@@ -353,6 +361,7 @@ class OnscreenGamepadControl {
       ),
       behaviorConfig: _map(json['bc']),
       positionFeedback: json['af'] is bool ? json['af'] as bool : null,
+      regionTrigger: json['rt'] is bool ? json['rt'] as bool : true,
       stickCenterMode: _enumByName(
         OnscreenGamepadStickCenterMode.values,
         json['cm'],
