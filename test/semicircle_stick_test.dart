@@ -469,18 +469,84 @@ void main() {
     expect(events.last.isDown, isTrue);
   });
 
-  testWidgets('unmounted controls ignore the remainder of a captured pointer', (
+  testWidgets('backgrounding releases a latched toggle without a pointer', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    final toggled = button.copyWith(
+      behavior: OnscreenGamepadControlBehavior.toggle,
+    );
+    await mount(
+      tester,
+      events,
+      customProfile: profile.copyWith(controls: [toggled]),
+    );
+    await tester.tap(find.byKey(ValueKey(toggled.id)));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(events, hasLength(2));
+    expect(events.first.isDown, isTrue);
+    expect(events.last.isUp, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.tap(find.byKey(ValueKey(toggled.id)));
+    expect(events.last.isDown, isTrue);
+  });
+
+  testWidgets(
+    'removing an active control releases it and ignores its old pointer',
+    (tester) async {
+      final events = <OnscreenGamepadEvent>[];
+      await mount(tester, events);
+      final pointer = await tester.startGesture(const Offset(340, 460));
+      await pointer.moveBy(const Offset(20, 0));
+      await mount(
+        tester,
+        events,
+        customProfile: profile.copyWith(controls: [button]),
+      );
+      expect(events[events.length - 2].value, Offset.zero);
+      expect(events.last.isUp, isTrue);
+      events.clear();
+      await pointer.moveBy(const Offset(10, 0));
+      await pointer.up();
+      expect(tester.takeException(), isNull);
+      expect(events, isEmpty);
+    },
+  );
+
+  testWidgets('unmounting the overlay releases a held button', (tester) async {
+    final events = <OnscreenGamepadEvent>[];
+    await mount(tester, events);
+    final pointer = await tester.startGesture(
+      tester.getCenter(find.byKey(ValueKey(button.id))),
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(events, hasLength(2));
+    expect(events.first.isDown, isTrue);
+    expect(events.last.isUp, isTrue);
+    events.clear();
+    await pointer.up();
+    expect(tester.takeException(), isNull);
+    expect(events, isEmpty);
+  });
+
+  testWidgets('unmounting ends pending stick button pulses exactly once', (
     tester,
   ) async {
     final events = <OnscreenGamepadEvent>[];
     await mount(tester, events);
-    final pointer = await tester.startGesture(const Offset(340, 460));
-    await pointer.moveBy(const Offset(20, 0));
+    await tester.tapAt(tester.getCenter(find.text('LS')));
     await tester.pumpWidget(const SizedBox.shrink());
+    final pulses = events
+        .where(
+          (event) => event.input.kind == OnscreenGamepadInputKind.gamepadButton,
+        )
+        .toList();
+    expect(pulses, hasLength(2));
+    expect(pulses.first.isDown, isTrue);
+    expect(pulses.last.isUp, isTrue);
     events.clear();
-    await pointer.moveBy(const Offset(10, 0));
-    await pointer.up();
-    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 40));
     expect(events, isEmpty);
   });
 

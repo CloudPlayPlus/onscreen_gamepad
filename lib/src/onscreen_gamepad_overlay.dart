@@ -149,6 +149,7 @@ class _ControlButtonState extends State<_ControlButton>
   Offset? _lastPointerPosition;
   bool _isToggled = false;
   int _mouseModeIndex = 0;
+  final _pendingStickButtonUps = <VoidCallback>{};
 
   @override
   void initState() {
@@ -159,15 +160,18 @@ class _ControlButtonState extends State<_ControlButton>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // 已捕获的 pointer 仍可能向旧命中路径发送 move/up，卸载后不再处理。
-    _activePointer = null;
+    _cancelInput(widget, afterFrame: true);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed && _activePointer != null) {
-      _releasePointer(allowStickTap: false);
+    if (state != AppLifecycleState.resumed &&
+        (_activePointer != null ||
+            _isToggled ||
+            _pendingStickButtonUps.isNotEmpty)) {
+      _cancelInput(widget);
+      setState(() {});
     }
   }
 
@@ -180,38 +184,57 @@ class _ControlButtonState extends State<_ControlButton>
         oldWidget.interactionRect != widget.interactionRect ||
         oldWidget.placed.hitRect != widget.placed.hitRect ||
         oldWidget.placed.visualSize != widget.placed.visualSize) {
-      final active = _activePointer != null || _isToggled;
-      final wasMoving = _stickValue != Offset.zero;
-      // 布局重建时立刻清除旧手势，帧结束后回零，避免在 build 中回调父组件。
-      if (active) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (wasMoving) {
-            oldWidget.onEvent?.call(
-              OnscreenGamepadEvent.stickChanged(
-                control: oldWidget.placed.control,
-                value: Offset.zero,
-              ),
-            );
-            oldWidget.onStickChanged?.call(
-              oldWidget.placed.control,
-              Offset.zero,
-            );
-          }
-          oldWidget.onEvent?.call(
-            OnscreenGamepadEvent.control(
-              control: oldWidget.placed.control,
-              phase: OnscreenGamepadEventPhase.up,
-            ),
-          );
-          oldWidget.onUp?.call(oldWidget.placed.control);
-        });
+      _cancelInput(oldWidget, afterFrame: true);
+    }
+  }
+
+  void _cancelInput(_ControlButton source, {bool afterFrame = false}) {
+    final control = source.placed.control;
+    final active = switch (control.behavior) {
+      OnscreenGamepadControlBehavior.toggle => _isToggled,
+      OnscreenGamepadControlBehavior.mouseModeCycle => false,
+      _ => _activePointer != null,
+    };
+    final wasMoving = _stickValue != Offset.zero;
+    final pendingStickButtonUps = _pendingStickButtonUps.toList();
+    // 先清除本地手势，旧命中路径后续的 move/up 不得再次输出。
+    _activePointer = null;
+    _stickValue = Offset.zero;
+    _stickOrigin = null;
+    _stickTapCandidate = false;
+    _lastPointerPosition = null;
+    _isToggled = false;
+    if (!active && !wasMoving && pendingStickButtonUps.isEmpty) return;
+
+    void release() {
+      for (final up in pendingStickButtonUps) {
+        up();
       }
-      _activePointer = null;
-      _stickValue = Offset.zero;
-      _stickOrigin = null;
-      _stickTapCandidate = false;
-      _lastPointerPosition = null;
-      _isToggled = false;
+      if (wasMoving) {
+        source.onEvent?.call(
+          OnscreenGamepadEvent.stickChanged(
+            control: control,
+            value: Offset.zero,
+          ),
+        );
+        source.onStickChanged?.call(control, Offset.zero);
+      }
+      if (active) {
+        source.onEvent?.call(
+          OnscreenGamepadEvent.control(
+            control: control,
+            phase: OnscreenGamepadEventPhase.up,
+          ),
+        );
+        source.onUp?.call(control);
+      }
+    }
+
+    // build/dispose 时不可同步触发父组件 setState，回调固定到原输入消费者。
+    if (afterFrame) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => release());
+    } else {
+      release();
     }
   }
 
@@ -460,7 +483,8 @@ class _ControlButtonState extends State<_ControlButton>
       return;
     }
     final buttonInput = OnscreenGamepadInput.gamepadButton(buttonCode);
-    widget.onEvent?.call(
+    final onEvent = widget.onEvent;
+    onEvent?.call(
       OnscreenGamepadEvent(
         type: OnscreenGamepadEventType.gamepadButton,
         phase: OnscreenGamepadEventPhase.down,
@@ -468,11 +492,9 @@ class _ControlButtonState extends State<_ControlButton>
         input: buttonInput,
       ),
     );
-    Future<void>.delayed(_kStickTapButtonDelay, () {
-      if (!mounted) {
-        return;
-      }
-      widget.onEvent?.call(
+    void release() {
+      if (!_pendingStickButtonUps.remove(release)) return;
+      onEvent?.call(
         OnscreenGamepadEvent(
           type: OnscreenGamepadEventType.gamepadButton,
           phase: OnscreenGamepadEventPhase.up,
@@ -480,7 +502,10 @@ class _ControlButtonState extends State<_ControlButton>
           input: buttonInput,
         ),
       );
-    });
+    }
+
+    _pendingStickButtonUps.add(release);
+    Future<void>.delayed(_kStickTapButtonDelay, release);
   }
 
   void _setStickValue(Offset value) {
