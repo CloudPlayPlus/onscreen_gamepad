@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'onscreen_gamepad_events.dart';
+import 'onscreen_gamepad_button_symbol.dart';
 import 'onscreen_gamepad_layout.dart';
 import 'onscreen_gamepad_models.dart';
 
@@ -1170,18 +1171,28 @@ class _ControlVisual extends StatelessWidget {
                   value: stickValue,
                 )
               : Center(
-                  child: Text(
-                    control.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.fade,
-                    softWrap: false,
-                    style: TextStyle(
-                      color: foreground,
-                      fontSize: math.min(size * .5, math.max(11, size * 0.25)),
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
+                  child: control.buttonIcon != OnscreenGamepadButtonIcon.text
+                      ? OnscreenGamepadButtonSymbol(
+                          icon: control.buttonIcon,
+                          color: foreground,
+                          size: size * .62,
+                          isActive: isActive,
+                        )
+                      : Text(
+                          control.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: foreground,
+                            fontSize: math.min(
+                              size * .5,
+                              math.max(11, size * 0.25),
+                            ),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0,
+                          ),
+                        ),
                 ),
         ),
       ),

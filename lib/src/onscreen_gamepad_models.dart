@@ -10,6 +10,25 @@ enum OnscreenGamepadAnchor {
 
 enum OnscreenGamepadControlKind { circle, square, stick }
 
+enum OnscreenGamepadButtonIcon {
+  text('文字'),
+  runWalk('奔跑 / 行走'),
+  jump('跳跃'),
+  crouch('下蹲'),
+  prone('趴下'),
+  attack('攻击'),
+  parry('防御 / 招架'),
+  medicine('药品'),
+  menu('菜单'),
+  backpack('背包'),
+  shoot('射击'),
+  reload('换弹'),
+  aim('瞄准');
+
+  const OnscreenGamepadButtonIcon(this.label);
+  final String label;
+}
+
 enum OnscreenGamepadButtonPressMode {
   normal('普通'),
   toggle('点击锁定'),
@@ -237,6 +256,7 @@ class OnscreenGamepadControl {
     this.behavior = OnscreenGamepadControlBehavior.normal,
     this.behaviorConfig = const {},
     this.buttonPressMode = OnscreenGamepadButtonPressMode.normal,
+    this.buttonIcon = OnscreenGamepadButtonIcon.text,
     this.positionFeedback,
     this.positionFeedbackLocation,
     this.stickCenterMode = OnscreenGamepadStickCenterMode.touchDown,
@@ -261,6 +281,7 @@ class OnscreenGamepadControl {
   final Map<String, Object?> behaviorConfig;
 
   final OnscreenGamepadButtonPressMode buttonPressMode;
+  final OnscreenGamepadButtonIcon buttonIcon;
   bool get supportsButtonPressMode =>
       isCameraStick ||
       (kind != OnscreenGamepadControlKind.stick &&
@@ -321,6 +342,7 @@ class OnscreenGamepadControl {
     OnscreenGamepadControlBehavior? behavior,
     Map<String, Object?>? behaviorConfig,
     OnscreenGamepadButtonPressMode? buttonPressMode,
+    OnscreenGamepadButtonIcon? buttonIcon,
     bool? positionFeedback,
     Offset? positionFeedbackLocation,
     OnscreenGamepadStickCenterMode? stickCenterMode,
@@ -344,6 +366,7 @@ class OnscreenGamepadControl {
       behavior: behavior ?? this.behavior,
       behaviorConfig: behaviorConfig ?? this.behaviorConfig,
       buttonPressMode: buttonPressMode ?? this.buttonPressMode,
+      buttonIcon: buttonIcon ?? this.buttonIcon,
       positionFeedback: positionFeedback ?? this.positionFeedback,
       positionFeedbackLocation:
           positionFeedbackLocation ?? this.positionFeedbackLocation,
@@ -371,6 +394,7 @@ class OnscreenGamepadControl {
       if (behavior != OnscreenGamepadControlBehavior.normal)
         'bh': behavior.name,
       if (behaviorConfig.isNotEmpty) 'bc': behaviorConfig,
+      if (buttonIcon != OnscreenGamepadButtonIcon.text) 'ic': buttonIcon.name,
       if (buttonPressMode != OnscreenGamepadButtonPressMode.normal)
         'pm': buttonPressMode.name,
       if (positionFeedback != null) 'af': positionFeedback,
@@ -420,6 +444,11 @@ class OnscreenGamepadControl {
         OnscreenGamepadControlBehavior.normal,
       ),
       behaviorConfig: _map(json['bc']),
+      buttonIcon: _enumByName(
+        OnscreenGamepadButtonIcon.values,
+        json['ic'],
+        OnscreenGamepadButtonIcon.text,
+      ),
       buttonPressMode: _enumByName(
         OnscreenGamepadButtonPressMode.values,
         json['pm'],

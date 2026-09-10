@@ -3,6 +3,51 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 void main() {
+  test('button icons survive serialization and copying', () {
+    for (final icon in OnscreenGamepadButtonIcon.values) {
+      final control = kOnscreenGamepadXboxProfile.controls.first.copyWith(
+        buttonIcon: icon,
+      );
+      expect(
+        OnscreenGamepadControl.fromJson(
+          control.toJson(),
+        ).copyWith(label: 'copy').buttonIcon,
+        icon,
+      );
+    }
+  });
+  testWidgets('walk run symbol follows held output and returns to walking', (
+    tester,
+  ) async {
+    final control = kOnscreenGamepadXboxProfile.controls
+        .firstWhere((c) => c.id == 'a')
+        .copyWith(
+          buttonIcon: OnscreenGamepadButtonIcon.runWalk,
+          buttonPressMode: OnscreenGamepadButtonPressMode.toggle,
+        );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: OnscreenGamepadOverlay(
+          profile: kOnscreenGamepadXboxProfile.copyWith(controls: [control]),
+        ),
+      ),
+    );
+    final symbol = find.byType(OnscreenGamepadButtonSymbol);
+    expect(
+      tester.widget<OnscreenGamepadButtonSymbol>(symbol).isActive,
+      isFalse,
+    );
+    await tester.tap(symbol);
+    await tester.pump();
+    expect(tester.widget<OnscreenGamepadButtonSymbol>(symbol).isActive, isTrue);
+    await tester.tap(symbol);
+    await tester.pump();
+    expect(
+      tester.widget<OnscreenGamepadButtonSymbol>(symbol).isActive,
+      isFalse,
+    );
+  });
   final button = kOnscreenGamepadXboxProfile.controls.firstWhere(
     (c) => c.id == 'a',
   );
