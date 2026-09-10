@@ -207,7 +207,7 @@ void sendStick(OnscreenGamepadInput input, Offset value) {
 
 ### `OnscreenGamepadEvent`
 
-新接入建议从 `onEvent` 转输入协议：
+新接入建议从 `onEvent` 转输入协议。摇杆的无 `value` 阶段只描述手势生命周期，不能根据配置中的 `buttonCode` 发送 L3/R3；实际摇杆轻点按钮由单独的 `gamepadButton` 事件输出，扩大区域起手不会输出该轻点：
 
 ```dart
 void sendInputEvent(OnscreenGamepadEvent event) {
@@ -219,8 +219,6 @@ void sendInputEvent(OnscreenGamepadEvent event) {
       if (value != null) {
         gamepadSender.sendAxis(event.input.xAxis!, value.dx);
         gamepadSender.sendAxis(event.input.yAxis!, value.dy);
-      } else if (event.input.buttonCode != null) {
-        gamepadSender.sendButton(event.input.buttonCode!, pressed: event.isDown);
       }
     case OnscreenGamepadEventType.keyboardKey:
       keyboardSender.sendKey(event.input.numericCode, pressed: event.isDown);
