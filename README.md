@@ -52,7 +52,9 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 鼠标倍率默认 10，范围 1–50。视角 R3 使用普通中号圆形按钮基准，所有控件大小倍率下限 25%。普通按键及视角 R3 可用 `buttonPressMode` 选择 `normal`、`toggle`、`longPressToggle` 或 `slideHold`：普通按压、点击锁定、满半秒松手锁定、滑过按钮后一起按住并随抬指释放。长按仅比较事件时间戳；锁定再点释放，失焦/卸载释放全部持有输入。
 
-`buttonIcon`（JSON `ic`）默认 `text`，也可选择 `runWalk`、`jump`、`crouch`、`prone`、`attack`、`parry`、`grapple`、`dart`、`interact`、`medicine`、`menu`、`backpack`、`shoot`、`reload`、`aim`。人物和动作朝左，射击为左上子弹，换弹为缩小子弹配左下/右上弯箭头；防御是盾牌，钩子是左上抓钩，飞镖为四刃，交互为人脸加对话气泡。内置轻量矢量图案继承前景透明度和尺寸，保持原文字名称与绑定。`runWalk` 在实际按住、锁定或滑动持有时显示奔跑，释放时显示行走。
+`buttonIcon`（JSON `ic`）默认 `text`，另有 80 个图标，分为八个 `OnscreenGamepadIconCategory` 类型。`icon.category`、`icon.label`、`icon.matches(query)` 供宿主选择器按分类、名称和别名搜索；模型仍只保存枚举名，不保存分类或搜索状态。内置轻量矢量图案继承前景透明度和尺寸，保持原文字名称与绑定。`runWalk` 在实际按住、锁定或滑动持有时显示奔跑，释放时显示行走。
+
+图案与分类来源为客户端仓库 `docs/prototypes/screen_buttons_rules/icons-draft.js`，预览入口为同目录 `icons.html`。在客户端执行 `node tool/sync_onscreen_icons.cjs <本仓库路径>` 生成 `onscreen_gamepad_icon_catalog.dart` 和 `onscreen_gamepad_button_paths.dart`，加 `--check` 检查一致性。只使用 Flutter Canvas，不增加运行时 SVG 或位图依赖。库的回归可用 Flutter 3.41.6 执行 `flutter pub get --no-example`、`flutter analyze --no-pub lib test`、`flutter test --no-pub`；example 的 SDK 要求独立于本库。
 
 ```dart
 Stack(

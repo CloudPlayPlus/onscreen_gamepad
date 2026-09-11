@@ -1,5 +1,8 @@
 import 'dart:ui';
 
+import 'onscreen_gamepad_icon_catalog.dart';
+export 'onscreen_gamepad_icon_catalog.dart';
+
 enum OnscreenGamepadAnchor {
   topLeft,
   topRight,
@@ -9,28 +12,6 @@ enum OnscreenGamepadAnchor {
 }
 
 enum OnscreenGamepadControlKind { circle, square, stick }
-
-enum OnscreenGamepadButtonIcon {
-  text('文字'),
-  runWalk('奔跑 / 行走'),
-  jump('跳跃'),
-  crouch('下蹲'),
-  prone('趴下'),
-  attack('攻击'),
-  parry('防御'),
-  grapple('钩子'),
-  dart('飞镖'),
-  interact('交互'),
-  medicine('药品'),
-  menu('菜单'),
-  backpack('背包'),
-  shoot('射击'),
-  reload('换弹'),
-  aim('瞄准');
-
-  const OnscreenGamepadButtonIcon(this.label);
-  final String label;
-}
 
 enum OnscreenGamepadButtonPressMode {
   normal('普通'),
