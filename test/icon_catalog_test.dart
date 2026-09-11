@@ -53,6 +53,18 @@ void main() {
         final image = await picture.toImage(24, 24);
         final pixels = (await image.toByteData())!.buffer.asUint8List();
         expect(pixels.any((value) => value != 0), isTrue, reason: icon.name);
+        if (icon == OnscreenGamepadButtonIcon.repair) {
+          // 沿手柄对角轴比较透明度；容忍边缘抗锯齿差异，不冻结整张图。
+          var difference = 0;
+          for (var y = 0; y < 24; y++) {
+            for (var x = 0; x < 24; x++) {
+              final alpha = pixels[(y * 24 + x) * 4 + 3];
+              final mirrored = pixels[((23 - x) * 24 + 23 - y) * 4 + 3];
+              difference += (alpha - mirrored).abs();
+            }
+          }
+          expect(difference / (24 * 24 * 255), lessThan(0.02));
+        }
         image.dispose();
       });
       picture.dispose();

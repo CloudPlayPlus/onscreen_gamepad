@@ -1291,34 +1291,16 @@ void _paintButtonSymbol(
     case OnscreenGamepadButtonIcon.repair:
       canvas.drawPath(
         Path()
-          ..moveTo(14, 3)
-          ..arcToPoint(
-            const Offset(7, 11),
-            radius: const Radius.elliptical(6, 6),
-            rotation: 0,
-            largeArc: false,
-            clockwise: false,
-          )
-          ..lineTo(3, 16)
-          ..arcToPoint(
-            const Offset(8, 21),
-            radius: const Radius.elliptical(3, 3),
-            rotation: 0,
-            largeArc: false,
-            clockwise: false,
-          )
-          ..lineTo(13, 16)
-          ..arcToPoint(
-            const Offset(21, 9),
-            radius: const Radius.elliptical(6, 6),
-            rotation: 0,
-            largeArc: false,
-            clockwise: false,
-          )
-          ..lineTo(17, 13)
-          ..lineTo(13, 9)
-          ..lineTo(17, 5)
-          ..lineTo(14, 3)
+          ..moveTo(16, 3)
+          ..cubicTo(12, 2, 8, 6, 9, 11)
+          ..lineTo(3.5, 16.5)
+          ..cubicTo(0.8, 19.2, 4.8, 23.2, 7.5, 20.5)
+          ..lineTo(13, 15)
+          ..cubicTo(18, 16, 22, 12, 21, 8)
+          ..lineTo(17.5, 11.5)
+          ..lineTo(12.5, 11.5)
+          ..lineTo(12.5, 6.5)
+          ..lineTo(16, 3)
           ..close(),
         stroke,
       );
