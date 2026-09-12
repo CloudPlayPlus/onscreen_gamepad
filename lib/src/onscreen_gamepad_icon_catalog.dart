@@ -57,6 +57,7 @@ enum OnscreenGamepadButtonIcon {
   burst('连发', OnscreenGamepadIconCategory.shooting, '点射 连射 burst auto'),
   safety('保险', OnscreenGamepadIconCategory.shooting, '安全锁 停火 safety'),
   skill('技能', OnscreenGamepadIconCategory.abilities, '雷电 电击 lightning skill'),
+  staff('法杖', OnscreenGamepadIconCategory.abilities, '法师 魔杖 magic staff wand'),
   fire('火焰', OnscreenGamepadIconCategory.abilities, '燃烧 火球 flame fireball'),
   ice('冰霜', OnscreenGamepadIconCategory.abilities, '冻结 冰冻 ice frost'),
   wind('风', OnscreenGamepadIconCategory.abilities, '风刃 wind'),

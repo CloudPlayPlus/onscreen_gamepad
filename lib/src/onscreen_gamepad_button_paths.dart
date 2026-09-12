@@ -165,31 +165,36 @@ void _paintButtonSymbol(
       );
       break;
     case OnscreenGamepadButtonIcon.climb:
-      canvas.drawCircle(const Offset(9, 4), 2, fill);
+      canvas.drawCircle(const Offset(16, 4), 2, fill);
       canvas.drawPath(
         Path()
-          ..moveTo(15, 3)
-          ..lineTo(15, 21)
-          ..moveTo(21, 3)
-          ..lineTo(21, 21)
-          ..moveTo(15, 7)
-          ..lineTo(21, 7)
-          ..moveTo(15, 13)
-          ..lineTo(21, 13)
-          ..moveTo(15, 19)
-          ..lineTo(21, 19)
-          ..moveTo(10, 8)
-          ..lineTo(11, 13)
-          ..lineTo(7, 16)
-          ..lineTo(5, 21)
-          ..moveTo(11, 13)
-          ..lineTo(14, 16)
-          ..lineTo(14, 20)
-          ..moveTo(10, 8)
-          ..lineTo(14, 5)
-          ..moveTo(10, 8)
-          ..lineTo(6, 11)
-          ..lineTo(3, 10),
+          ..moveTo(3, 2)
+          ..lineTo(3, 22)
+          ..moveTo(9, 2)
+          ..lineTo(9, 22)
+          ..moveTo(3, 5)
+          ..lineTo(9, 5)
+          ..moveTo(3, 9)
+          ..lineTo(9, 9)
+          ..moveTo(3, 13)
+          ..lineTo(9, 13)
+          ..moveTo(3, 17)
+          ..lineTo(9, 17)
+          ..moveTo(3, 21)
+          ..lineTo(9, 21)
+          ..moveTo(16, 8)
+          ..lineTo(17, 13.5)
+          ..lineTo(12, 14)
+          ..lineTo(9, 17)
+          ..moveTo(17, 13.5)
+          ..lineTo(11.5, 17.5)
+          ..lineTo(9, 21)
+          ..moveTo(16, 8)
+          ..lineTo(12, 8)
+          ..lineTo(9, 5)
+          ..moveTo(16, 9)
+          ..lineTo(13, 11)
+          ..lineTo(9, 9),
         stroke,
       );
       break;
@@ -246,27 +251,26 @@ void _paintButtonSymbol(
       );
       break;
     case OnscreenGamepadButtonIcon.slide:
-      canvas.drawCircle(const Offset(9, 7), 2, fill);
+      canvas.drawCircle(const Offset(20, 9.5), 2, fill);
       canvas.drawPath(
         Path()
-          ..moveTo(10, 11)
-          ..lineTo(14, 15)
-          ..lineTo(9, 18)
-          ..lineTo(4, 18)
-          ..moveTo(14, 15)
+          ..moveTo(16.5, 12)
+          ..lineTo(11, 16)
+          ..lineTo(7, 17)
+          ..lineTo(3, 18)
+          ..moveTo(11, 16)
+          ..lineTo(8, 12.5)
+          ..lineTo(4, 14.5)
+          ..moveTo(16.5, 12)
+          ..lineTo(13, 8.5)
+          ..lineTo(10, 9.5)
+          ..moveTo(16.5, 12)
+          ..lineTo(19, 15)
           ..lineTo(18, 18)
-          ..lineTo(21, 18)
-          ..moveTo(10, 11)
-          ..lineTo(6, 14)
-          ..lineTo(3, 14)
-          ..moveTo(10, 11)
-          ..lineTo(14, 9)
           ..moveTo(3, 21)
           ..lineTo(21, 21)
-          ..moveTo(16, 5)
-          ..lineTo(21, 5)
-          ..moveTo(18, 9)
-          ..lineTo(21, 9),
+          ..moveTo(15, 5)
+          ..lineTo(21, 5),
         stroke,
       );
       break;
@@ -347,20 +351,20 @@ void _paintButtonSymbol(
     case OnscreenGamepadButtonIcon.counter:
       canvas.drawPath(
         Path()
-          ..moveTo(12, 4)
-          ..lineTo(5, 7)
-          ..lineTo(5, 12)
-          ..cubicTo(5, 16, 8, 18, 12, 20)
-          ..cubicTo(16, 18, 19, 16, 19, 12)
-          ..lineTo(19, 7)
-          ..lineTo(12, 4)
+          ..moveTo(12, 10)
+          ..lineTo(4, 12)
+          ..lineTo(4, 15)
+          ..cubicTo(4, 18, 8, 21, 12, 22)
+          ..cubicTo(16, 21, 20, 18, 20, 15)
+          ..lineTo(20, 12)
+          ..lineTo(12, 10)
           ..close()
-          ..moveTo(3, 3)
-          ..lineTo(8, 5)
-          ..lineTo(3, 7)
-          ..moveTo(15, 16)
-          ..lineTo(12, 12)
-          ..lineTo(15, 8),
+          ..moveTo(4, 3)
+          ..lineTo(12, 7)
+          ..lineTo(20, 3)
+          ..moveTo(16, 3)
+          ..lineTo(20, 3)
+          ..lineTo(20, 7),
         stroke,
       );
       break;
@@ -387,30 +391,32 @@ void _paintButtonSymbol(
     case OnscreenGamepadButtonIcon.bow:
       canvas.drawPath(
         Path()
-          ..moveTo(7, 3)
-          ..cubicTo(20, 7, 20, 17, 7, 21)
-          ..lineTo(12, 12)
-          ..lineTo(7, 3)
-          ..close()
-          ..moveTo(3, 12)
-          ..lineTo(21, 12)
-          ..moveTo(18, 9)
-          ..lineTo(21, 12)
-          ..lineTo(18, 15),
+          ..moveTo(5, 20)
+          ..cubicTo(2, 9, 9, 2, 20, 5)
+          ..lineTo(5, 20)
+          ..moveTo(3, 3)
+          ..lineTo(12.5, 12.5)
+          ..moveTo(3, 8)
+          ..lineTo(3, 3)
+          ..lineTo(8, 3),
         stroke,
       );
       break;
     case OnscreenGamepadButtonIcon.axe:
       canvas.drawPath(
         Path()
-          ..moveTo(5, 21)
-          ..lineTo(17, 3)
-          ..moveTo(13, 5)
-          ..cubicTo(10, 3, 6, 4, 4, 7)
-          ..lineTo(10, 12)
-          ..moveTo(17, 7)
-          ..cubicTo(21, 8, 22, 11, 21, 14)
-          ..lineTo(14, 12),
+          ..moveTo(3, 3)
+          ..lineTo(21, 21)
+          ..moveTo(6, 6)
+          ..cubicTo(5, 9, 4, 10, 2, 10)
+          ..cubicTo(2, 14, 6, 18, 10, 18)
+          ..cubicTo(8, 15, 9, 12, 11, 11)
+          ..close()
+          ..moveTo(6, 6)
+          ..cubicTo(9, 5, 10, 4, 10, 2)
+          ..cubicTo(15, 2, 19, 6, 19, 11)
+          ..cubicTo(15, 9, 12, 9, 11, 11)
+          ..close(),
         stroke,
       );
       break;
@@ -418,25 +424,25 @@ void _paintButtonSymbol(
       canvas.drawPath(
         Path()
           ..moveTo(3, 3)
-          ..lineTo(8, 5)
-          ..lineTo(15, 15)
-          ..lineTo(12, 18)
-          ..lineTo(4, 8)
-          ..lineTo(3, 3)
+          ..lineTo(3, 8)
+          ..lineTo(6, 14)
+          ..lineTo(10, 12)
+          ..lineTo(7, 6)
           ..close()
-          ..moveTo(21, 3)
-          ..lineTo(16, 5)
-          ..lineTo(14, 8)
-          ..moveTo(20, 8)
-          ..lineTo(16, 13)
-          ..moveTo(10, 19)
-          ..lineTo(16, 13)
-          ..moveTo(8, 13)
-          ..lineTo(5, 17)
-          ..moveTo(12, 17)
-          ..lineTo(16, 21)
-          ..moveTo(12, 17)
-          ..lineTo(8, 21),
+          ..moveTo(5.5, 15.5)
+          ..lineTo(11.5, 12.5)
+          ..moveTo(8.5, 14)
+          ..lineTo(11, 19)
+          ..moveTo(13, 3)
+          ..lineTo(13, 8)
+          ..lineTo(16, 14)
+          ..lineTo(20, 12)
+          ..lineTo(17, 6)
+          ..close()
+          ..moveTo(15.5, 15.5)
+          ..lineTo(21.5, 12.5)
+          ..moveTo(18.5, 14)
+          ..lineTo(21, 19),
         stroke,
       );
       break;
@@ -477,39 +483,37 @@ void _paintButtonSymbol(
     case OnscreenGamepadButtonIcon.reload:
       canvas.drawPath(
         Path()
-          ..moveTo(3, 10)
-          ..arcToPoint(
-            const Offset(18, 5),
-            radius: const Radius.elliptical(9, 9),
-            rotation: 0,
-            largeArc: false,
-            clockwise: true,
-          )
-          ..lineTo(20, 7)
-          ..moveTo(20, 3)
-          ..lineTo(20, 7)
-          ..lineTo(16, 7)
-          ..moveTo(21, 14)
-          ..arcToPoint(
-            const Offset(6, 19),
-            radius: const Radius.elliptical(9, 9),
-            rotation: 0,
-            largeArc: false,
-            clockwise: true,
-          )
-          ..lineTo(4, 17)
-          ..moveTo(4, 21)
-          ..lineTo(4, 17)
-          ..lineTo(8, 17)
-          ..moveTo(10, 15)
-          ..lineTo(10, 9)
-          ..lineTo(12, 7)
-          ..lineTo(14, 9)
-          ..lineTo(14, 15)
-          ..lineTo(10, 15)
+          ..moveTo(7, 7)
+          ..quadraticBezierTo(10, 7, 12, 9)
+          ..lineTo(17, 14)
+          ..lineTo(14, 17)
+          ..lineTo(9, 12)
+          ..quadraticBezierTo(7, 10, 7, 7)
           ..close()
-          ..moveTo(10, 12)
-          ..lineTo(14, 12),
+          ..moveTo(11, 14)
+          ..lineTo(14, 11)
+          ..moveTo(8, 2.835)
+          ..arcToPoint(
+            const Offset(21.85, 13.74),
+            radius: const Radius.elliptical(10, 10),
+            rotation: 0,
+            largeArc: false,
+            clockwise: true,
+          )
+          ..moveTo(19.1, 11.4)
+          ..lineTo(21.85, 13.74)
+          ..lineTo(22.7, 10.2)
+          ..moveTo(16, 21.165)
+          ..arcToPoint(
+            const Offset(2.15, 10.26),
+            radius: const Radius.elliptical(10, 10),
+            rotation: 0,
+            largeArc: false,
+            clockwise: true,
+          )
+          ..moveTo(4.9, 12.6)
+          ..lineTo(2.15, 10.26)
+          ..lineTo(1.3, 13.8),
         stroke,
       );
       break;
@@ -561,32 +565,37 @@ void _paintButtonSymbol(
     case OnscreenGamepadButtonIcon.weaponSwap:
       canvas.drawPath(
         Path()
-          ..moveTo(3, 6)
-          ..lineTo(19, 6)
-          ..lineTo(16, 3)
-          ..moveTo(21, 18)
-          ..lineTo(5, 18)
-          ..lineTo(8, 21)
-          ..moveTo(4, 10)
-          ..lineTo(11, 10)
-          ..lineTo(11, 13)
-          ..lineTo(8, 13)
-          ..lineTo(8, 16)
-          ..lineTo(5, 16)
-          ..lineTo(5, 13)
-          ..lineTo(4, 13)
-          ..lineTo(4, 10)
-          ..close()
-          ..moveTo(20, 14)
-          ..lineTo(13, 14)
-          ..lineTo(13, 11)
-          ..lineTo(16, 11)
-          ..lineTo(16, 8)
-          ..lineTo(19, 8)
-          ..lineTo(19, 11)
-          ..lineTo(20, 11)
-          ..lineTo(20, 14)
-          ..close(),
+          ..moveTo(7, 12)
+          ..lineTo(9, 10)
+          ..lineTo(9, 18)
+          ..moveTo(7, 18)
+          ..lineTo(11, 18)
+          ..moveTo(13, 8)
+          ..cubicTo(13, 5, 18, 5, 18, 8)
+          ..cubicTo(18, 10, 13, 11, 13, 14)
+          ..lineTo(18, 14)
+          ..moveTo(8, 2.835)
+          ..arcToPoint(
+            const Offset(21.85, 13.74),
+            radius: const Radius.elliptical(10, 10),
+            rotation: 0,
+            largeArc: false,
+            clockwise: true,
+          )
+          ..moveTo(19.1, 11.4)
+          ..lineTo(21.85, 13.74)
+          ..lineTo(22.7, 10.2)
+          ..moveTo(16, 21.165)
+          ..arcToPoint(
+            const Offset(2.15, 10.26),
+            radius: const Radius.elliptical(10, 10),
+            rotation: 0,
+            largeArc: false,
+            clockwise: true,
+          )
+          ..moveTo(4.9, 12.6)
+          ..lineTo(2.15, 10.26)
+          ..lineTo(1.3, 13.8),
         stroke,
       );
       break;
@@ -596,50 +605,66 @@ void _paintButtonSymbol(
           ..moveTo(3, 6)
           ..lineTo(21, 6)
           ..lineTo(21, 12)
-          ..lineTo(11, 12)
-          ..lineTo(9, 21)
-          ..lineTo(4, 21)
-          ..lineTo(7, 12)
+          ..lineTo(17, 12)
+          ..lineTo(20, 21)
+          ..lineTo(15, 21)
+          ..lineTo(13, 12)
           ..lineTo(3, 12)
           ..lineTo(3, 6)
           ..close()
-          ..moveTo(11, 12)
-          ..lineTo(11, 16)
-          ..lineTo(15, 16)
-          ..lineTo(17, 12)
-          ..moveTo(16, 6)
-          ..lineTo(16, 12),
+          ..moveTo(13, 12)
+          ..lineTo(13, 16)
+          ..lineTo(9, 16)
+          ..lineTo(7, 12)
+          ..moveTo(8, 6)
+          ..lineTo(8, 12),
         stroke,
       );
       break;
     case OnscreenGamepadButtonIcon.rifle:
       canvas.drawPath(
         Path()
-          ..moveTo(3, 10)
-          ..lineTo(8, 10)
-          ..lineTo(8, 7)
-          ..lineTo(11, 7)
-          ..lineTo(11, 10)
-          ..lineTo(18, 10)
-          ..lineTo(18, 8)
-          ..moveTo(18, 11)
-          ..lineTo(22, 11)
-          ..moveTo(8, 10)
-          ..lineTo(18, 10)
-          ..lineTo(18, 14)
-          ..lineTo(11, 14)
-          ..lineTo(9, 20)
-          ..lineTo(6, 20)
-          ..lineTo(8, 14)
-          ..lineTo(5, 14)
-          ..lineTo(3, 17)
+          ..moveTo(2, 10)
+          ..lineTo(6, 10)
+          ..moveTo(3, 7)
           ..lineTo(3, 10)
+          ..moveTo(6, 8)
+          ..lineTo(17, 8)
+          ..lineTo(17, 10)
+          ..lineTo(19, 10)
+          ..lineTo(22, 8)
+          ..lineTo(22, 15)
+          ..lineTo(18, 13)
+          ..lineTo(6, 13)
+          ..lineTo(6, 8)
           ..close()
-          ..moveTo(13, 14)
-          ..lineTo(13, 18)
-          ..lineTo(16, 18)
-          ..lineTo(15, 14),
+          ..moveTo(9, 8)
+          ..lineTo(9, 5)
+          ..lineTo(15, 5)
+          ..lineTo(15, 8)
+          ..moveTo(10, 13)
+          ..lineTo(9, 19)
+          ..lineTo(12, 20)
+          ..lineTo(14, 13)
+          ..moveTo(16, 13)
+          ..lineTo(17, 19)
+          ..lineTo(20, 19)
+          ..lineTo(18, 13),
         stroke,
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(9, 10.5)
+          ..lineTo(13, 10.5)
+          ..moveTo(14, 13)
+          ..lineTo(14, 16)
+          ..lineTo(17, 16),
+        (Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round),
       );
       break;
     case OnscreenGamepadButtonIcon.scope:
@@ -724,6 +749,22 @@ void _paintButtonSymbol(
           ..lineTo(13, 9)
           ..lineTo(14, 2)
           ..close(),
+        stroke,
+      );
+      break;
+    case OnscreenGamepadButtonIcon.staff:
+      canvas.drawPath(
+        Path()
+          ..moveTo(6, 2)
+          ..lineTo(10, 6)
+          ..lineTo(6, 10)
+          ..lineTo(2, 6)
+          ..close()
+          ..moveTo(3, 9)
+          ..cubicTo(6, 13, 9, 14, 12, 12)
+          ..cubicTo(14, 9, 13, 6, 9, 3)
+          ..moveTo(12, 12)
+          ..lineTo(21, 21),
         stroke,
       );
       break;
@@ -897,21 +938,28 @@ void _paintButtonSymbol(
       );
       break;
     case OnscreenGamepadButtonIcon.teleport:
-      canvas.drawOval(
-        Rect.fromCenter(center: const Offset(5, 12), width: 4, height: 18),
-        stroke,
-      );
-      canvas.drawOval(
-        Rect.fromCenter(center: const Offset(19, 12), width: 4, height: 18),
-        stroke,
-      );
+      canvas.drawCircle(const Offset(4.5, 6), 2, fill);
       canvas.drawPath(
         Path()
-          ..moveTo(8, 12)
-          ..lineTo(16, 12)
-          ..moveTo(13, 9)
-          ..lineTo(16, 12)
-          ..lineTo(13, 15),
+          ..moveTo(5.5, 10)
+          ..lineTo(7.5, 13)
+          ..lineTo(3.5, 12.75)
+          ..lineTo(4.5, 16.75)
+          ..moveTo(5.5, 10)
+          ..lineTo(3, 9.5)
+          ..lineTo(2, 8.5)
+          ..moveTo(5.5, 10)
+          ..lineTo(7.5, 9.5)
+          ..moveTo(16.5, 9.5)
+          ..lineTo(18.5, 9)
+          ..lineTo(21, 10.5)
+          ..moveTo(16.5, 13)
+          ..lineTo(20, 15.5)
+          ..lineTo(22, 13)
+          ..moveTo(7.5, 3)
+          ..lineTo(7.5, 21)
+          ..moveTo(16.5, 3)
+          ..lineTo(16.5, 21),
         stroke,
       );
       break;
