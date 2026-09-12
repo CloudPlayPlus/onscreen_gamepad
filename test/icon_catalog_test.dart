@@ -9,7 +9,7 @@ void main() {
     final icons = OnscreenGamepadButtonIcon.values.where(
       (icon) => icon != OnscreenGamepadButtonIcon.text,
     );
-    expect(icons.length, 80);
+    expect(icons.length, 81);
     for (final icon in icons) {
       expect(icon.category, isNotNull, reason: icon.name);
       expect(icon.matches(icon.label), isTrue);
@@ -18,6 +18,12 @@ void main() {
     expect(OnscreenGamepadButtonIcon.dodge.matches('翻滚'), isTrue);
     expect(OnscreenGamepadButtonIcon.heal.matches(' HEAL '), isTrue);
     expect(OnscreenGamepadButtonIcon.heal.matches('换弹'), isFalse);
+    expect(
+      OnscreenGamepadButtonIcon.staff.category,
+      OnscreenGamepadIconCategory.abilities,
+    );
+    expect(OnscreenGamepadButtonIcon.staff.matches('魔杖'), isTrue);
+    expect(OnscreenGamepadButtonIcon.staff.matches('magic staff'), isTrue);
   });
 
   testWidgets('every icon paints at button size without an empty result', (
