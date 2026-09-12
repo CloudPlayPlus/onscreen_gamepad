@@ -24,7 +24,11 @@ void main() {
 
   test('mouse drag is opt-in and survives JSON and binding changes', () {
     expect(button.mouseDrag, isFalse);
-    final configured = button.copyWith(mouseDrag: true, mouseSensitivity: 2.5);
+    final configured = button.copyWith(
+      mouseDrag: true,
+      dragOutput: OnscreenGamepadDragOutput.mouse,
+      mouseSensitivity: 2.5,
+    );
     final restored = OnscreenGamepadControl.fromJson(
       jsonDecode(jsonEncode(configured.toJson())) as Map<String, dynamic>,
     ).copyWith(input: const OnscreenGamepadInput.keyboardKey('ShiftLeft'));
@@ -43,7 +47,12 @@ void main() {
       (tester) async {
         final events = <OnscreenGamepadEvent>[];
         await mount(tester, [
-          button.copyWith(input: input, mouseDrag: true, mouseSensitivity: 2),
+          button.copyWith(
+            input: input,
+            mouseDrag: true,
+            dragOutput: OnscreenGamepadDragOutput.mouse,
+            mouseSensitivity: 2,
+          ),
         ], events);
         final finger = await tester.startGesture(
           tester.getCenter(find.text('A')),
@@ -83,6 +92,7 @@ void main() {
       await mount(tester, [
         button.copyWith(
           mouseDrag: true,
+          dragOutput: OnscreenGamepadDragOutput.mouse,
           buttonPressMode: OnscreenGamepadButtonPressMode.toggle,
         ),
       ], events);
@@ -122,7 +132,11 @@ void main() {
   ) async {
     final events = <OnscreenGamepadEvent>[];
     await mount(tester, [
-      button.copyWith(mouseDrag: true, mouseSensitivity: 1),
+      button.copyWith(
+        mouseDrag: true,
+        dragOutput: OnscreenGamepadDragOutput.mouse,
+        mouseSensitivity: 1,
+      ),
     ], events);
     final center = tester.getCenter(find.text('A'));
     final finger = await tester.startGesture(center);
@@ -141,6 +155,7 @@ void main() {
   ) async {
     final source = button.copyWith(
       mouseDrag: true,
+      dragOutput: OnscreenGamepadDragOutput.mouse,
       mouseSensitivity: 2,
       buttonPressMode: OnscreenGamepadButtonPressMode.slideHold,
     );
@@ -150,6 +165,7 @@ void main() {
       anchor: OnscreenGamepadAnchor.topLeft,
       offset: Offset.zero,
       mouseDrag: true,
+      dragOutput: OnscreenGamepadDragOutput.mouse,
       mouseSensitivity: 50,
     );
     final events = <OnscreenGamepadEvent>[];
@@ -178,6 +194,7 @@ void main() {
         .copyWith(
           stickMode: OnscreenGamepadStickMode.camera,
           mouseDrag: true,
+          dragOutput: OnscreenGamepadDragOutput.mouse,
           mouseSensitivity: 2,
         );
     final events = <OnscreenGamepadEvent>[];

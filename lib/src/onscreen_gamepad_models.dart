@@ -13,6 +13,15 @@ enum OnscreenGamepadAnchor {
 
 enum OnscreenGamepadControlKind { circle, square, stick }
 
+enum OnscreenGamepadDragOutput {
+  rightStick('右摇杆'),
+  leftStick('左摇杆'),
+  mouse('鼠标移动');
+
+  const OnscreenGamepadDragOutput(this.label);
+  final String label;
+}
+
 enum OnscreenGamepadButtonPressMode {
   normal('普通'),
   toggle('点击锁定'),
@@ -248,6 +257,7 @@ class OnscreenGamepadControl {
     this.stickMode = OnscreenGamepadStickMode.joystick,
     this.mouseSensitivity = 10,
     this.mouseDrag = false,
+    this.dragOutput = OnscreenGamepadDragOutput.rightStick,
     this.autoRun = true,
     this.sizeScale = 1,
     this.color,
@@ -288,6 +298,7 @@ class OnscreenGamepadControl {
 
   /// 按钮触点拖动时同时输出相对鼠标位移，不改变原按键绑定。
   final bool mouseDrag;
+  final OnscreenGamepadDragOutput dragOutput;
   final bool autoRun;
 
   bool get isRightStick =>
@@ -338,6 +349,7 @@ class OnscreenGamepadControl {
     OnscreenGamepadStickMode? stickMode,
     double? mouseSensitivity,
     bool? mouseDrag,
+    OnscreenGamepadDragOutput? dragOutput,
     bool? autoRun,
     double? sizeScale,
     Color? color,
@@ -364,6 +376,7 @@ class OnscreenGamepadControl {
       stickMode: stickMode ?? this.stickMode,
       mouseSensitivity: mouseSensitivity ?? this.mouseSensitivity,
       mouseDrag: mouseDrag ?? this.mouseDrag,
+      dragOutput: dragOutput ?? this.dragOutput,
       autoRun: autoRun ?? this.autoRun,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
@@ -392,6 +405,8 @@ class OnscreenGamepadControl {
       if (stickMode != OnscreenGamepadStickMode.joystick) 'sm': stickMode.name,
       if (mouseSensitivity != 10) 'ms': effectiveMouseSensitivity,
       if (mouseDrag) 'md': true,
+      if (dragOutput != OnscreenGamepadDragOutput.rightStick)
+        'do': dragOutput.name,
       if (!autoRun) 'ar': false,
       if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
         'cm': stickCenterMode.name,
@@ -454,6 +469,11 @@ class OnscreenGamepadControl {
       ),
       mouseSensitivity: _double(json['ms'], 10),
       mouseDrag: json['md'] == true,
+      dragOutput: _enumByName(
+        OnscreenGamepadDragOutput.values,
+        json['do'],
+        OnscreenGamepadDragOutput.rightStick,
+      ),
       autoRun: json['ar'] is bool ? json['ar'] as bool : true,
       stickCenterMode: _enumByName(
         OnscreenGamepadStickCenterMode.values,
