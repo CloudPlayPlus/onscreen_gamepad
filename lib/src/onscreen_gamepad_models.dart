@@ -247,6 +247,7 @@ class OnscreenGamepadControl {
     this.regionTrigger = true,
     this.stickMode = OnscreenGamepadStickMode.joystick,
     this.mouseSensitivity = 10,
+    this.mouseDrag = false,
     this.autoRun = true,
     this.sizeScale = 1,
     this.color,
@@ -284,6 +285,9 @@ class OnscreenGamepadControl {
   final bool regionTrigger;
   final OnscreenGamepadStickMode stickMode;
   final double mouseSensitivity;
+
+  /// 按钮触点拖动时同时输出相对鼠标位移，不改变原按键绑定。
+  final bool mouseDrag;
   final bool autoRun;
 
   bool get isRightStick =>
@@ -333,6 +337,7 @@ class OnscreenGamepadControl {
     bool? regionTrigger,
     OnscreenGamepadStickMode? stickMode,
     double? mouseSensitivity,
+    bool? mouseDrag,
     bool? autoRun,
     double? sizeScale,
     Color? color,
@@ -358,6 +363,7 @@ class OnscreenGamepadControl {
       regionTrigger: regionTrigger ?? this.regionTrigger,
       stickMode: stickMode ?? this.stickMode,
       mouseSensitivity: mouseSensitivity ?? this.mouseSensitivity,
+      mouseDrag: mouseDrag ?? this.mouseDrag,
       autoRun: autoRun ?? this.autoRun,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
@@ -385,6 +391,7 @@ class OnscreenGamepadControl {
       if (!regionTrigger) 'rt': false,
       if (stickMode != OnscreenGamepadStickMode.joystick) 'sm': stickMode.name,
       if (mouseSensitivity != 10) 'ms': effectiveMouseSensitivity,
+      if (mouseDrag) 'md': true,
       if (!autoRun) 'ar': false,
       if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
         'cm': stickCenterMode.name,
@@ -446,6 +453,7 @@ class OnscreenGamepadControl {
         OnscreenGamepadStickMode.joystick,
       ),
       mouseSensitivity: _double(json['ms'], 10),
+      mouseDrag: json['md'] == true,
       autoRun: json['ar'] is bool ? json['ar'] as bool : true,
       stickCenterMode: _enumByName(
         OnscreenGamepadStickCenterMode.values,

@@ -83,6 +83,8 @@ Stack(
 
 `onControlDown`、`onControlUp` 和 `onStickChanged` 是兼容旧接入的便捷回调。新接入建议优先使用 `onEvent`，这样后续键盘、鼠标、FPS 开火按钮和自定义输入可以走同一条转换链路。
 
+普通按键（键盘键、鼠标键、手柄键及视角 R3）可开启 `mouseDrag`（JSON `md`，默认关闭），保持原按压模式和绑定，并在按钮触点拖动时同时输出相对鼠标位移。复用 `mouseSensitivity`（默认 10，范围 1–50），拖出按钮仍有效；抬指停止移动，即使按键已锁定。滑动连按只采用起手按钮的移动属性，R3 按钮和半屏视角触点独立记录位移。
+
 ## 核心 API
 
 ### `OnscreenGamepadOverlay`
