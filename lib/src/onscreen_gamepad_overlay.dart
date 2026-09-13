@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
@@ -281,6 +282,11 @@ class _ControlButtonState extends State<_ControlButton>
   Offset _buttonDragValue = Offset.zero;
   bool _autoRunning = false;
   bool _sprintDown = false;
+  int _doubleTapDirection = 0;
+  int _lastDirectionDown = 0;
+  Duration? _lastDirectionDownTime;
+  Timer? _doubleTapTimer;
+  Offset _doubleTapValue = Offset.zero;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
   Offset? _stickTouchDown;
@@ -355,6 +361,12 @@ class _ControlButtonState extends State<_ControlButton>
         oldWidget.placed.control.autoRun != widget.placed.control.autoRun ||
         oldWidget.placed.control.sprintEnabled !=
             widget.placed.control.sprintEnabled ||
+        oldWidget.placed.control.sprintDoubleTap !=
+            widget.placed.control.sprintDoubleTap ||
+        !const DeepCollectionEquality().equals(
+          oldWidget.placed.control.behaviorConfig,
+          widget.placed.control.behaviorConfig,
+        ) ||
         oldWidget.placed.control.effectiveSprintThreshold !=
             widget.placed.control.effectiveSprintThreshold ||
         !const DeepCollectionEquality().equals(
@@ -373,6 +385,7 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _cancelInput(_ControlButton source, {bool afterFrame = false}) {
+    _resetDoubleTap();
     final control = source.placed.control;
     _releaseSlideTargets(afterFrame: afterFrame);
     final sprintDown = _sprintDown;
@@ -453,11 +466,18 @@ class _ControlButtonState extends State<_ControlButton>
     }
   }
 
+  // 输入脉冲不能改变手指的视觉反馈。
+  Offset get _visualStickValue =>
+      widget.placed.control.doubleTapSprintEnabled && _activePointer != null
+      ? _doubleTapValue
+      : _stickValue;
+
   bool get _showRunTarget =>
       widget.placed.control.autoRunEnabled &&
       _activePointer != null &&
-      _stickValue.dy < 0 &&
-      _stickValue.dx.abs() <= -_stickValue.dy * math.tan(math.pi / 6);
+      _visualStickValue.dy < 0 &&
+      _visualStickValue.dx.abs() <=
+          -_visualStickValue.dy * math.tan(math.pi / 6);
 
   Offset get _runTarget {
     final center = widget.placed.control.positionFeedbackEnabled
@@ -477,7 +497,7 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   bool get _runTargetReached {
-    if (!_showRunTarget || _stickValue.distance < .99) return false;
+    if (!_showRunTarget || _visualStickValue.distance < .99) return false;
     final touch = widget.placed.control.positionFeedbackEnabled
         ? widget.feedbackCenter + _lastPointerPosition! - _stickOrigin!
         : _lastPointerPosition!;
@@ -521,7 +541,7 @@ class _ControlButtonState extends State<_ControlButton>
               _activePointer != null) ...[
             if (!control.positionFeedbackEnabled &&
                 _stickOrigin != null &&
-                _stickValue != Offset.zero)
+                _visualStickValue != Offset.zero)
               Positioned.fromRect(
                 rect: Rect.fromCenter(
                   center: _stickOrigin!,
@@ -532,7 +552,7 @@ class _ControlButtonState extends State<_ControlButton>
                   child: CustomPaint(
                     key: ValueKey('${control.id}-semicircle'),
                     painter: OnscreenGamepadSemicirclePainter(
-                      direction: _stickValue.direction,
+                      direction: _visualStickValue.direction,
                       color: _withOpacity(
                         Colors.white,
                         widget.profile.semicircleOpacity,
@@ -544,7 +564,7 @@ class _ControlButtonState extends State<_ControlButton>
             if (control.positionFeedbackEnabled &&
                 _stickOrigin != null &&
                 _lastPointerPosition != null &&
-                _stickValue != Offset.zero) ...[
+                _visualStickValue != Offset.zero) ...[
               Positioned.fromRect(
                 rect: Rect.fromCenter(
                   center: widget.feedbackCenter,
@@ -555,7 +575,7 @@ class _ControlButtonState extends State<_ControlButton>
                   child: CustomPaint(
                     key: ValueKey('${control.id}-position-feedback'),
                     painter: OnscreenGamepadSemicirclePainter(
-                      direction: _stickValue.direction,
+                      direction: _visualStickValue.direction,
                       color: _withOpacity(
                         Colors.white,
                         widget.profile.semicircleOpacity,
@@ -610,7 +630,7 @@ class _ControlButtonState extends State<_ControlButton>
                 foreground: foreground,
                 size: widget.placed.visualSize,
                 isActive: isActive,
-                stickValue: _stickValue,
+                stickValue: _visualStickValue,
               ),
             ),
           if (_showRunTarget)
@@ -687,7 +707,7 @@ class _ControlButtonState extends State<_ControlButton>
     }
     _emitControlPhase(OnscreenGamepadEventPhase.down);
     if (_isStick(control)) {
-      _beginStick(event.localPosition);
+      _beginStick(event.localPosition, event.timeStamp);
       if (wasRunning) _stickTapCandidate = false;
     }
   }
@@ -717,7 +737,7 @@ class _ControlButtonState extends State<_ControlButton>
       return;
     }
     if (_isStick(control)) {
-      _updateStick(event.localPosition);
+      _updateStick(event.localPosition, event.timeStamp);
     }
     if (control.behavior == OnscreenGamepadControlBehavior.fpsFire) {
       _emitFpsFireMove(event.localPosition);
@@ -737,7 +757,9 @@ class _ControlButtonState extends State<_ControlButton>
       });
       return;
     }
-    if (_isStick(widget.placed.control)) _updateStick(event.localPosition);
+    if (_isStick(widget.placed.control)) {
+      _updateStick(event.localPosition, event.timeStamp);
+    }
     _releasePointer();
   }
 
@@ -910,8 +932,10 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _releasePointer({bool allowStickTap = true}) {
+    final startAutoRun = allowStickTap && _runTargetReached;
+    _resetDoubleTap();
     final control = widget.placed.control;
-    if (allowStickTap && _runTargetReached) {
+    if (startAutoRun) {
       setState(() {
         _autoRunning = true;
         _activePointer = null;
@@ -961,7 +985,7 @@ class _ControlButtonState extends State<_ControlButton>
     });
   }
 
-  void _beginStick(Offset localPosition) {
+  void _beginStick(Offset localPosition, Duration timeStamp) {
     _stickTouchDown = localPosition;
     _stickOrigin =
         widget.placed.control.stickCenterMode ==
@@ -971,10 +995,10 @@ class _ControlButtonState extends State<_ControlButton>
     _stickTapCandidate = widget.placed.hitRect
         .shift(-widget.interactionRect.topLeft)
         .contains(localPosition);
-    _updateStick(localPosition);
+    _updateStick(localPosition, timeStamp);
   }
 
-  void _updateStick(Offset localPosition) {
+  void _updateStick(Offset localPosition, Duration timeStamp) {
     // 满力度时输入向量可能不变，触点提示仍须跟随真实手指位置。
     if (_lastPointerPosition != localPosition) {
       setState(() => _lastPointerPosition = localPosition);
@@ -990,7 +1014,9 @@ class _ControlButtonState extends State<_ControlButton>
         ((distance - _kStickDeadZone) / (_kStickTravel - _kStickDeadZone))
             .clamp(0.0, 1.0);
     final value = distance == 0 ? Offset.zero : delta / distance * force;
-    if (widget.placed.control.sprintKeyEnabled) {
+    var atSprintThreshold = false;
+    if (widget.placed.control.sprintKeyEnabled ||
+        widget.placed.control.doubleTapSprintEnabled) {
       final targetOrigin = widget.placed.control.positionFeedbackEnabled
           ? widget.feedbackCenter
           : origin;
@@ -998,12 +1024,91 @@ class _ControlButtonState extends State<_ControlButton>
         _kStickTravel,
         (_runTarget - targetOrigin).distance - 30,
       );
+      atSprintThreshold =
+          distance >=
+          runDistance * widget.placed.control.effectiveSprintThreshold;
       _setSprintDown(
-        distance >=
-            runDistance * widget.placed.control.effectiveSprintThreshold,
+        widget.placed.control.sprintKeyEnabled && atSprintThreshold,
       );
     }
+    if (widget.placed.control.doubleTapSprintEnabled) {
+      // 四个斜向都按半径判断距离，角度仅决定是否进入左右奔跑扇区。
+      final inHorizontalSector =
+          delta.dx.abs() * math.sqrt(3) + 1e-9 >= delta.dy.abs();
+      _updateDoubleTap(
+        value,
+        atSprintThreshold && inHorizontalSector,
+        timeStamp,
+      );
+    } else {
+      _setStickValue(value);
+    }
+  }
+
+  void _resetDoubleTap() {
+    _doubleTapTimer?.cancel();
+    _doubleTapTimer = null;
+    _doubleTapDirection = 0;
+    _doubleTapValue = Offset.zero;
+    _lastDirectionDown = 0;
+    _lastDirectionDownTime = null;
+  }
+
+  int _axisDirection(double value) =>
+      value.abs() <= .35 ? 0 : (value < 0 ? -1 : 1);
+
+  void _updateDoubleTap(Offset value, bool atThreshold, Duration timeStamp) {
+    final direction = _axisDirection(value.dx);
+    final previousDirection = _axisDirection(_doubleTapValue.dx);
+    if (direction != previousDirection) {
+      _doubleTapTimer?.cancel();
+      _doubleTapTimer = null;
+      _doubleTapDirection = 0;
+    }
+    // 与消费端一致：一次向量变化先输出上下，再输出左右的新按下。
+    final vertical = _axisDirection(value.dy);
+    if (vertical != 0 && vertical != _axisDirection(_doubleTapValue.dy)) {
+      _lastDirectionDown = vertical * 2;
+      _lastDirectionDownTime = timeStamp;
+    }
+    if (direction != 0 && direction != previousDirection) {
+      _lastDirectionDown = direction;
+      _lastDirectionDownTime = timeStamp;
+    }
+    _doubleTapValue = value;
+    if (_doubleTapTimer != null) {
+      _setStickValue(Offset(_stickValue.dx == 0 ? 0 : value.dx, value.dy));
+      return;
+    }
     _setStickValue(value);
+    if (!atThreshold || direction == 0 || _doubleTapDirection == direction) {
+      return;
+    }
+    final age = _lastDirectionDownTime == null
+        ? null
+        : timeStamp - _lastDirectionDownTime!;
+    final reusePress =
+        _lastDirectionDown == direction &&
+        age != null &&
+        age >= Duration.zero &&
+        age < const Duration(milliseconds: 200);
+    _setStickValue(Offset(0, value.dy));
+    _continueDoubleTap(direction, reusePress ? 1 : 3);
+  }
+
+  void _continueDoubleTap(int direction, int remaining) {
+    _doubleTapTimer = Timer(const Duration(milliseconds: 50), () {
+      _doubleTapTimer = null;
+      _setStickValue(
+        remaining.isOdd ? _doubleTapValue : Offset(0, _doubleTapValue.dy),
+      );
+      if (remaining == 1) {
+        // 奔跑状态随水平键的持有结束，不随奔跑距离阈值结束。
+        _doubleTapDirection = direction;
+      } else {
+        _continueDoubleTap(direction, remaining - 1);
+      }
+    });
   }
 
   void _emitStickButtonTap(OnscreenGamepadControl control) {

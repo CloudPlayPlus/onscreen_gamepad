@@ -260,6 +260,7 @@ class OnscreenGamepadControl {
     this.dragOutput = OnscreenGamepadDragOutput.rightStick,
     this.autoRun = true,
     this.sprintEnabled = false,
+    this.sprintDoubleTap = false,
     this.sprintKey = const OnscreenGamepadInput.keyboardKey('ShiftLeft'),
     this.sprintThreshold = .70,
     this.sizeScale = 1,
@@ -304,6 +305,12 @@ class OnscreenGamepadControl {
   final OnscreenGamepadDragOutput dragOutput;
   final bool autoRun;
   final bool sprintEnabled;
+  final bool sprintDoubleTap;
+  bool get doubleTapSprintEnabled =>
+      isMovementStick &&
+      behavior == OnscreenGamepadControlBehavior.wasdStick &&
+      sprintEnabled &&
+      sprintDoubleTap;
   final OnscreenGamepadInput sprintKey;
 
   /// 相对自动奔跑最短触发行程的比例。
@@ -313,6 +320,7 @@ class OnscreenGamepadControl {
   bool get sprintKeyEnabled =>
       isMovementStick &&
       sprintEnabled &&
+      !doubleTapSprintEnabled &&
       (sprintKey.kind == OnscreenGamepadInputKind.keyboardKey ||
           sprintKey.kind == OnscreenGamepadInputKind.gamepadButton);
 
@@ -367,6 +375,7 @@ class OnscreenGamepadControl {
     OnscreenGamepadDragOutput? dragOutput,
     bool? autoRun,
     bool? sprintEnabled,
+    bool? sprintDoubleTap,
     OnscreenGamepadInput? sprintKey,
     double? sprintThreshold,
     double? sizeScale,
@@ -397,6 +406,7 @@ class OnscreenGamepadControl {
       dragOutput: dragOutput ?? this.dragOutput,
       autoRun: autoRun ?? this.autoRun,
       sprintEnabled: sprintEnabled ?? this.sprintEnabled,
+      sprintDoubleTap: sprintDoubleTap ?? this.sprintDoubleTap,
       sprintKey: sprintKey ?? this.sprintKey,
       sprintThreshold: sprintThreshold ?? this.sprintThreshold,
       sizeScale: sizeScale ?? this.sizeScale,
@@ -430,6 +440,7 @@ class OnscreenGamepadControl {
         'do': dragOutput.name,
       if (!autoRun) 'ar': false,
       if (sprintEnabled) 'se': true,
+      if (sprintDoubleTap) 'sd': true,
       if (sprintKey.code != 'ShiftLeft' ||
           sprintKey.numericCode != null ||
           sprintKey.kind != OnscreenGamepadInputKind.keyboardKey)
@@ -503,6 +514,7 @@ class OnscreenGamepadControl {
       ),
       autoRun: json['ar'] is bool ? json['ar'] as bool : true,
       sprintEnabled: json['se'] == true,
+      sprintDoubleTap: json['sd'] == true,
       sprintKey: json['sk'] is Map
           ? OnscreenGamepadInput.fromJson(
               Map<String, Object?>.from(json['sk'] as Map),
