@@ -47,6 +47,28 @@ void main() {
     );
   });
 
+  testWidgets('normalized threshold survives parent rebuild while held', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    final control = left.copyWith(
+      sprintEnabled: true,
+      autoRun: false,
+      sprintThreshold: double.nan,
+    );
+    await mount(tester, control, events);
+    final pointer = await tester.startGesture(const Offset(260, 420));
+    await pointer.moveBy(const Offset(160, 0));
+    expect(keys(events), [OnscreenGamepadEventPhase.down]);
+    await mount(tester, control, events);
+    expect(keys(events), [OnscreenGamepadEventPhase.down]);
+    await pointer.up();
+    expect(keys(events), [
+      OnscreenGamepadEventPhase.down,
+      OnscreenGamepadEventPhase.up,
+    ]);
+  });
+
   for (final code in ['leftStick', 'rightTrigger']) {
     testWidgets('gamepad sprint $code presses and releases at threshold', (
       tester,

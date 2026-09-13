@@ -355,8 +355,8 @@ class _ControlButtonState extends State<_ControlButton>
         oldWidget.placed.control.autoRun != widget.placed.control.autoRun ||
         oldWidget.placed.control.sprintEnabled !=
             widget.placed.control.sprintEnabled ||
-        oldWidget.placed.control.sprintThreshold !=
-            widget.placed.control.sprintThreshold ||
+        oldWidget.placed.control.effectiveSprintThreshold !=
+            widget.placed.control.effectiveSprintThreshold ||
         !const DeepCollectionEquality().equals(
           oldWidget.placed.control.sprintKey.toJson(),
           widget.placed.control.sprintKey.toJson(),
