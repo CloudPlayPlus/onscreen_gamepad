@@ -280,6 +280,7 @@ class _ControlButtonState extends State<_ControlButton>
   Offset? _buttonDragOrigin;
   Offset _buttonDragValue = Offset.zero;
   bool _autoRunning = false;
+  bool _sprintDown = false;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
   Offset? _stickTouchDown;
@@ -352,6 +353,14 @@ class _ControlButtonState extends State<_ControlButton>
         oldWidget.placed.control.dragOutput !=
             widget.placed.control.dragOutput ||
         oldWidget.placed.control.autoRun != widget.placed.control.autoRun ||
+        oldWidget.placed.control.sprintEnabled !=
+            widget.placed.control.sprintEnabled ||
+        oldWidget.placed.control.effectiveSprintThreshold !=
+            widget.placed.control.effectiveSprintThreshold ||
+        !const DeepCollectionEquality().equals(
+          oldWidget.placed.control.sprintKey.toJson(),
+          widget.placed.control.sprintKey.toJson(),
+        ) ||
         oldWidget.placed.control.stickCenterMode !=
             widget.placed.control.stickCenterMode ||
         oldWidget.placed.control.regionTrigger !=
@@ -366,6 +375,8 @@ class _ControlButtonState extends State<_ControlButton>
   void _cancelInput(_ControlButton source, {bool afterFrame = false}) {
     final control = source.placed.control;
     _releaseSlideTargets(afterFrame: afterFrame);
+    final sprintDown = _sprintDown;
+    _sprintDown = false;
     final buttonDown = _buttonOutputDown;
     final active = control.supportsButtonPressMode
         ? false
@@ -396,7 +407,8 @@ class _ControlButtonState extends State<_ControlButton>
     _buttonLocked = false;
     _buttonDownTime = null;
     _unlockGesture = false;
-    if (!active &&
+    if (!sprintDown &&
+        !active &&
         !wasMoving &&
         !wasButtonDragging &&
         !buttonDown &&
@@ -406,6 +418,7 @@ class _ControlButtonState extends State<_ControlButton>
 
     void release() {
       if (wasButtonDragging) _emitButtonDragStick(source, Offset.zero);
+      if (sprintDown) _emitSprint(source, false);
       if (buttonDown) {
         _emitButtonPhase(source, OnscreenGamepadEventPhase.up);
       }
@@ -907,6 +920,7 @@ class _ControlButtonState extends State<_ControlButton>
         _stickTapCandidate = false;
         _lastPointerPosition = null;
       });
+      _setSprintDown(control.sprintKeyEnabled);
       _setStickValue(const Offset(0, -1));
       return;
     }
@@ -934,6 +948,7 @@ class _ControlButtonState extends State<_ControlButton>
       if (shouldEmitStickTap) {
         _emitStickButtonTap(control);
       }
+      _setSprintDown(false);
       _setStickValue(Offset.zero);
     }
     _emitControlPhase(OnscreenGamepadEventPhase.up);
@@ -975,6 +990,19 @@ class _ControlButtonState extends State<_ControlButton>
         ((distance - _kStickDeadZone) / (_kStickTravel - _kStickDeadZone))
             .clamp(0.0, 1.0);
     final value = distance == 0 ? Offset.zero : delta / distance * force;
+    if (widget.placed.control.sprintKeyEnabled) {
+      final targetOrigin = widget.placed.control.positionFeedbackEnabled
+          ? widget.feedbackCenter
+          : origin;
+      final runDistance = math.max(
+        _kStickTravel,
+        (_runTarget - targetOrigin).distance - 30,
+      );
+      _setSprintDown(
+        distance >=
+            runDistance * widget.placed.control.effectiveSprintThreshold,
+      );
+    }
     _setStickValue(value);
   }
 
@@ -1009,6 +1037,29 @@ class _ControlButtonState extends State<_ControlButton>
 
     _pendingStickButtonUps.add(release);
     Future<void>.delayed(_kStickTapButtonDelay, release);
+  }
+
+  void _emitSprint(_ControlButton source, bool down) {
+    source.onEvent?.call(
+      OnscreenGamepadEvent(
+        type:
+            source.placed.control.sprintKey.kind ==
+                OnscreenGamepadInputKind.gamepadButton
+            ? OnscreenGamepadEventType.gamepadButton
+            : OnscreenGamepadEventType.keyboardKey,
+        phase: down
+            ? OnscreenGamepadEventPhase.down
+            : OnscreenGamepadEventPhase.up,
+        control: source.placed.control,
+        input: source.placed.control.sprintKey,
+      ),
+    );
+  }
+
+  void _setSprintDown(bool down) {
+    if (_sprintDown == down) return;
+    _sprintDown = down;
+    _emitSprint(widget, down);
   }
 
   void _setStickValue(Offset value) {

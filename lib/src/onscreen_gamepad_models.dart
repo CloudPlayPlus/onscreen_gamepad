@@ -259,6 +259,9 @@ class OnscreenGamepadControl {
     this.mouseDrag = false,
     this.dragOutput = OnscreenGamepadDragOutput.rightStick,
     this.autoRun = true,
+    this.sprintEnabled = false,
+    this.sprintKey = const OnscreenGamepadInput.keyboardKey('ShiftLeft'),
+    this.sprintThreshold = .70,
     this.sizeScale = 1,
     this.color,
     this.sortOrder = 0,
@@ -300,6 +303,18 @@ class OnscreenGamepadControl {
   final bool mouseDrag;
   final OnscreenGamepadDragOutput dragOutput;
   final bool autoRun;
+  final bool sprintEnabled;
+  final OnscreenGamepadInput sprintKey;
+
+  /// 相对自动奔跑最短触发行程的比例。
+  final double sprintThreshold;
+  double get effectiveSprintThreshold =>
+      sprintThreshold.isFinite ? sprintThreshold.clamp(.1, 1) : .70;
+  bool get sprintKeyEnabled =>
+      isMovementStick &&
+      sprintEnabled &&
+      (sprintKey.kind == OnscreenGamepadInputKind.keyboardKey ||
+          sprintKey.kind == OnscreenGamepadInputKind.gamepadButton);
 
   bool get isRightStick =>
       kind == OnscreenGamepadControlKind.stick &&
@@ -351,6 +366,9 @@ class OnscreenGamepadControl {
     bool? mouseDrag,
     OnscreenGamepadDragOutput? dragOutput,
     bool? autoRun,
+    bool? sprintEnabled,
+    OnscreenGamepadInput? sprintKey,
+    double? sprintThreshold,
     double? sizeScale,
     Color? color,
     int? sortOrder,
@@ -378,6 +396,9 @@ class OnscreenGamepadControl {
       mouseDrag: mouseDrag ?? this.mouseDrag,
       dragOutput: dragOutput ?? this.dragOutput,
       autoRun: autoRun ?? this.autoRun,
+      sprintEnabled: sprintEnabled ?? this.sprintEnabled,
+      sprintKey: sprintKey ?? this.sprintKey,
+      sprintThreshold: sprintThreshold ?? this.sprintThreshold,
       sizeScale: sizeScale ?? this.sizeScale,
       color: color ?? this.color,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -408,6 +429,12 @@ class OnscreenGamepadControl {
       if (dragOutput != OnscreenGamepadDragOutput.rightStick)
         'do': dragOutput.name,
       if (!autoRun) 'ar': false,
+      if (sprintEnabled) 'se': true,
+      if (sprintKey.code != 'ShiftLeft' ||
+          sprintKey.numericCode != null ||
+          sprintKey.kind != OnscreenGamepadInputKind.keyboardKey)
+        'sk': sprintKey.toJson(),
+      if (sprintThreshold != .70) 'st': effectiveSprintThreshold,
       if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
         'cm': stickCenterMode.name,
       if (positionFeedbackLocation != null)
@@ -475,6 +502,13 @@ class OnscreenGamepadControl {
         OnscreenGamepadDragOutput.rightStick,
       ),
       autoRun: json['ar'] is bool ? json['ar'] as bool : true,
+      sprintEnabled: json['se'] == true,
+      sprintKey: json['sk'] is Map
+          ? OnscreenGamepadInput.fromJson(
+              Map<String, Object?>.from(json['sk'] as Map),
+            )
+          : const OnscreenGamepadInput.keyboardKey('ShiftLeft'),
+      sprintThreshold: _double(json['st'], .70),
       stickCenterMode: _enumByName(
         OnscreenGamepadStickCenterMode.values,
         json['cm'],
