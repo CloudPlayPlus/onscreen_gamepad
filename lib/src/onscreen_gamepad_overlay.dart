@@ -283,6 +283,8 @@ class _ControlButtonState extends State<_ControlButton>
   bool _autoRunning = false;
   bool _sprintDown = false;
   int _doubleTapDirection = 0;
+  int _lastDirectionDown = 0;
+  Duration? _lastDirectionDownTime;
   Timer? _doubleTapTimer;
   Offset _doubleTapValue = Offset.zero;
   Offset _stickValue = Offset.zero;
@@ -698,7 +700,7 @@ class _ControlButtonState extends State<_ControlButton>
     }
     _emitControlPhase(OnscreenGamepadEventPhase.down);
     if (_isStick(control)) {
-      _beginStick(event.localPosition);
+      _beginStick(event.localPosition, event.timeStamp);
       if (wasRunning) _stickTapCandidate = false;
     }
   }
@@ -728,7 +730,7 @@ class _ControlButtonState extends State<_ControlButton>
       return;
     }
     if (_isStick(control)) {
-      _updateStick(event.localPosition);
+      _updateStick(event.localPosition, event.timeStamp);
     }
     if (control.behavior == OnscreenGamepadControlBehavior.fpsFire) {
       _emitFpsFireMove(event.localPosition);
@@ -748,7 +750,9 @@ class _ControlButtonState extends State<_ControlButton>
       });
       return;
     }
-    if (_isStick(widget.placed.control)) _updateStick(event.localPosition);
+    if (_isStick(widget.placed.control)) {
+      _updateStick(event.localPosition, event.timeStamp);
+    }
     _releasePointer();
   }
 
@@ -973,7 +977,7 @@ class _ControlButtonState extends State<_ControlButton>
     });
   }
 
-  void _beginStick(Offset localPosition) {
+  void _beginStick(Offset localPosition, Duration timeStamp) {
     _stickTouchDown = localPosition;
     _stickOrigin =
         widget.placed.control.stickCenterMode ==
@@ -983,10 +987,10 @@ class _ControlButtonState extends State<_ControlButton>
     _stickTapCandidate = widget.placed.hitRect
         .shift(-widget.interactionRect.topLeft)
         .contains(localPosition);
-    _updateStick(localPosition);
+    _updateStick(localPosition, timeStamp);
   }
 
-  void _updateStick(Offset localPosition) {
+  void _updateStick(Offset localPosition, Duration timeStamp) {
     // 满力度时输入向量可能不变，触点提示仍须跟随真实手指位置。
     if (_lastPointerPosition != localPosition) {
       setState(() => _lastPointerPosition = localPosition);
@@ -1020,7 +1024,7 @@ class _ControlButtonState extends State<_ControlButton>
       );
     }
     if (widget.placed.control.doubleTapSprintEnabled) {
-      _updateDoubleTap(value, atSprintThreshold);
+      _updateDoubleTap(value, atSprintThreshold, timeStamp);
     } else {
       _setStickValue(value);
     }
@@ -1030,23 +1034,65 @@ class _ControlButtonState extends State<_ControlButton>
     _doubleTapTimer?.cancel();
     _doubleTapTimer = null;
     _doubleTapDirection = 0;
+    _doubleTapValue = Offset.zero;
+    _lastDirectionDown = 0;
+    _lastDirectionDownTime = null;
   }
 
-  void _updateDoubleTap(Offset value, bool atThreshold) {
-    final direction = !atThreshold || value.dx.abs() <= .35
-        ? 0
-        : (value.dx < 0 ? -1 : 1);
-    final changed = direction != _doubleTapDirection;
-    if (changed) _resetDoubleTap();
-    _doubleTapDirection = direction;
+  int _axisDirection(double value) =>
+      value.abs() <= .35 ? 0 : (value < 0 ? -1 : 1);
+
+  void _updateDoubleTap(Offset value, bool atThreshold, Duration timeStamp) {
+    final direction = _axisDirection(value.dx);
+    final previousDirection = _axisDirection(_doubleTapValue.dx);
+    if (direction != previousDirection) {
+      _doubleTapTimer?.cancel();
+      _doubleTapTimer = null;
+      _doubleTapDirection = 0;
+    }
+    // 与消费端一致：一次向量变化先输出上下，再输出左右的新按下。
+    final vertical = _axisDirection(value.dy);
+    if (vertical != 0 && vertical != _axisDirection(_doubleTapValue.dy)) {
+      _lastDirectionDown = vertical * 2;
+      _lastDirectionDownTime = timeStamp;
+    }
+    if (direction != 0 && direction != previousDirection) {
+      _lastDirectionDown = direction;
+      _lastDirectionDownTime = timeStamp;
+    }
     _doubleTapValue = value;
-    _setStickValue(_doubleTapTimer != null ? Offset(0, value.dy) : value);
-    if (!changed || direction == 0) return;
-    // 左右键松开50ms后再次按住，上下分量及消费端引用计数保持不变。
+    if (_doubleTapTimer != null) {
+      _setStickValue(Offset(_stickValue.dx == 0 ? 0 : value.dx, value.dy));
+      return;
+    }
+    _setStickValue(value);
+    if (!atThreshold || direction == 0 || _doubleTapDirection == direction) {
+      return;
+    }
+    final age = _lastDirectionDownTime == null
+        ? null
+        : timeStamp - _lastDirectionDownTime!;
+    final reusePress =
+        _lastDirectionDown == direction &&
+        age != null &&
+        age >= Duration.zero &&
+        age < const Duration(milliseconds: 200);
     _setStickValue(Offset(0, value.dy));
+    _continueDoubleTap(direction, reusePress ? 1 : 3);
+  }
+
+  void _continueDoubleTap(int direction, int remaining) {
     _doubleTapTimer = Timer(const Duration(milliseconds: 50), () {
       _doubleTapTimer = null;
-      _setStickValue(_doubleTapValue);
+      _setStickValue(
+        remaining.isOdd ? _doubleTapValue : Offset(0, _doubleTapValue.dy),
+      );
+      if (remaining == 1) {
+        // 奔跑状态随水平键的持有结束，不随奔跑距离阈值结束。
+        _doubleTapDirection = direction;
+      } else {
+        _continueDoubleTap(direction, remaining - 1);
+      }
     });
   }
 

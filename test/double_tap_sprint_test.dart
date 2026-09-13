@@ -40,7 +40,7 @@ void main() {
     },
   );
 
-  testWidgets('double tap waits 50ms, horizontal only and once per excursion', (
+  testWidgets('double tap waits 50ms, horizontal only and stays running', (
     tester,
   ) async {
     final events = <OnscreenGamepadEvent>[];
@@ -71,6 +71,76 @@ void main() {
     expect(events, isEmpty);
   });
 
+  testWidgets('running survives retreat below sprint threshold until release', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    await mount(tester, events);
+    final pointer = await tester.startGesture(const Offset(260, 420));
+    await pointer.moveTo(const Offset(420, 420));
+    await tester.pump(const Duration(milliseconds: 50));
+    events.clear();
+    await pointer.moveTo(const Offset(285, 420));
+    await pointer.moveTo(const Offset(420, 420));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(values(events).where((v) => v.dx == 0), isEmpty);
+    await pointer.up();
+  });
+
+  for (final elapsed in [199, 200, 250]) {
+    testWidgets('first press age ${elapsed}ms chooses single or full tap', (
+      tester,
+    ) async {
+      final events = <OnscreenGamepadEvent>[];
+      await mount(tester, events);
+      final pointer = await tester.startGesture(const Offset(260, 420));
+      await pointer.moveTo(
+        const Offset(285, 420),
+        timeStamp: const Duration(milliseconds: 10),
+      );
+      events.clear();
+      await pointer.moveTo(
+        const Offset(420, 420),
+        timeStamp: Duration(milliseconds: 10 + elapsed),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(values(events).last.dx, 1);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(values(events).last.dx, elapsed < 200 ? 1 : 0);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(values(events).last.dx, 1);
+      await pointer.up();
+    });
+  }
+
+  testWidgets('vertical press after right requires full double tap', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    await mount(tester, events);
+    final pointer = await tester.startGesture(const Offset(260, 420));
+    await pointer.moveTo(
+      const Offset(285, 420),
+      timeStamp: const Duration(milliseconds: 10),
+    );
+    await pointer.moveTo(
+      const Offset(285, 445),
+      timeStamp: const Duration(milliseconds: 20),
+    );
+    events.clear();
+    await pointer.moveTo(
+      const Offset(420, 580),
+      timeStamp: const Duration(milliseconds: 30),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(values(events).last.dx, 0);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(values(events).last.dx, greaterThan(.35));
+    expect(values(events).every((v) => v.dy > .35), isTrue);
+    await pointer.up();
+  });
+
   testWidgets('vertical motion never double taps, retreat and sides rearm', (
     tester,
   ) async {
@@ -99,6 +169,26 @@ void main() {
     await pointer.cancel();
     expect(values(events).last, Offset.zero);
   });
+  for (final elapsed in [0, 50, 100]) {
+    testWidgets('full double tap cancels at ${elapsed}ms', (tester) async {
+      final events = <OnscreenGamepadEvent>[];
+      await mount(tester, events);
+      final pointer = await tester.startGesture(const Offset(260, 420));
+      await pointer.moveTo(const Offset(285, 420));
+      await pointer.moveTo(
+        const Offset(420, 420),
+        timeStamp: const Duration(milliseconds: 250),
+      );
+      if (elapsed >= 50) await tester.pump(const Duration(milliseconds: 50));
+      if (elapsed >= 100) await tester.pump(const Duration(milliseconds: 50));
+      await pointer.moveTo(const Offset(260, 420));
+      events.clear();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(values(events).where((v) => v.dx != 0), isEmpty);
+      await pointer.up();
+    });
+  }
+
   for (final action in ['up', 'cancel', 'hide', 'retreat']) {
     testWidgets('gap cannot repress after $action', (tester) async {
       final events = <OnscreenGamepadEvent>[];
