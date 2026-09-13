@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
@@ -282,10 +281,7 @@ class _ControlButtonState extends State<_ControlButton>
   Offset _buttonDragValue = Offset.zero;
   bool _autoRunning = false;
   bool _sprintDown = false;
-  Timer? _doubleTapTimer;
   int _doubleTapDirection = 0;
-  bool _doubleTapGap = false;
-  Offset _doubleTapValue = Offset.zero;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
   Offset? _stickTouchDown;
@@ -362,8 +358,6 @@ class _ControlButtonState extends State<_ControlButton>
             widget.placed.control.sprintEnabled ||
         oldWidget.placed.control.sprintDoubleTap !=
             widget.placed.control.sprintDoubleTap ||
-        oldWidget.placed.control.effectiveSprintTapIntervalMs !=
-            widget.placed.control.effectiveSprintTapIntervalMs ||
         !const DeepCollectionEquality().equals(
           oldWidget.placed.control.behaviorConfig,
           widget.placed.control.behaviorConfig,
@@ -1030,10 +1024,7 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _resetDoubleTap() {
-    _doubleTapTimer?.cancel();
-    _doubleTapTimer = null;
     _doubleTapDirection = 0;
-    _doubleTapGap = false;
   }
 
   void _updateDoubleTap(Offset value, bool atThreshold) {
@@ -1041,24 +1032,12 @@ class _ControlButtonState extends State<_ControlButton>
         ? 0
         : (value.dx < 0 ? -1 : 1);
     final changed = direction != _doubleTapDirection;
-    if (changed) _resetDoubleTap();
-    _doubleTapValue = value;
-    _setStickValue(_doubleTapGap ? Offset(0, value.dy) : value);
-    if (!changed || direction == 0) return;
     _doubleTapDirection = direction;
-    final interval = Duration(
-      milliseconds: widget.placed.control.effectiveSprintTapIntervalMs,
-    );
-    // 通过原有方向向量通路输出双击，保留上下键及消费端持键引用计数。
-    _doubleTapTimer = Timer(interval, () {
-      _doubleTapGap = true;
-      _setStickValue(Offset(0, _doubleTapValue.dy));
-      _doubleTapTimer = Timer(interval, () {
-        _doubleTapGap = false;
-        _doubleTapTimer = null;
-        _setStickValue(_doubleTapValue);
-      });
-    });
+    _setStickValue(value);
+    if (!changed || direction == 0) return;
+    // 连续发送松开、按下，不延时；上下分量及消费端引用计数保持不变。
+    _setStickValue(Offset(0, value.dy));
+    _setStickValue(value);
   }
 
   void _emitStickButtonTap(OnscreenGamepadControl control) {

@@ -261,7 +261,6 @@ class OnscreenGamepadControl {
     this.autoRun = true,
     this.sprintEnabled = false,
     this.sprintDoubleTap = false,
-    this.sprintTapIntervalMs = 60,
     this.sprintKey = const OnscreenGamepadInput.keyboardKey('ShiftLeft'),
     this.sprintThreshold = .70,
     this.sizeScale = 1,
@@ -307,8 +306,6 @@ class OnscreenGamepadControl {
   final bool autoRun;
   final bool sprintEnabled;
   final bool sprintDoubleTap;
-  final int sprintTapIntervalMs;
-  int get effectiveSprintTapIntervalMs => sprintTapIntervalMs.clamp(30, 150);
   bool get doubleTapSprintEnabled =>
       isMovementStick &&
       behavior == OnscreenGamepadControlBehavior.wasdStick &&
@@ -379,7 +376,6 @@ class OnscreenGamepadControl {
     bool? autoRun,
     bool? sprintEnabled,
     bool? sprintDoubleTap,
-    int? sprintTapIntervalMs,
     OnscreenGamepadInput? sprintKey,
     double? sprintThreshold,
     double? sizeScale,
@@ -411,7 +407,6 @@ class OnscreenGamepadControl {
       autoRun: autoRun ?? this.autoRun,
       sprintEnabled: sprintEnabled ?? this.sprintEnabled,
       sprintDoubleTap: sprintDoubleTap ?? this.sprintDoubleTap,
-      sprintTapIntervalMs: sprintTapIntervalMs ?? this.sprintTapIntervalMs,
       sprintKey: sprintKey ?? this.sprintKey,
       sprintThreshold: sprintThreshold ?? this.sprintThreshold,
       sizeScale: sizeScale ?? this.sizeScale,
@@ -446,7 +441,6 @@ class OnscreenGamepadControl {
       if (!autoRun) 'ar': false,
       if (sprintEnabled) 'se': true,
       if (sprintDoubleTap) 'sd': true,
-      if (sprintTapIntervalMs != 60) 'si': effectiveSprintTapIntervalMs,
       if (sprintKey.code != 'ShiftLeft' ||
           sprintKey.numericCode != null ||
           sprintKey.kind != OnscreenGamepadInputKind.keyboardKey)
@@ -521,7 +515,6 @@ class OnscreenGamepadControl {
       autoRun: json['ar'] is bool ? json['ar'] as bool : true,
       sprintEnabled: json['se'] == true,
       sprintDoubleTap: json['sd'] == true,
-      sprintTapIntervalMs: (json['si'] as num?)?.toInt() ?? 60,
       sprintKey: json['sk'] is Map
           ? OnscreenGamepadInput.fromJson(
               Map<String, Object?>.from(json['sk'] as Map),
