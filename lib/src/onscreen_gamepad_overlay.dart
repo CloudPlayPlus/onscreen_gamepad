@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
@@ -282,6 +283,8 @@ class _ControlButtonState extends State<_ControlButton>
   bool _autoRunning = false;
   bool _sprintDown = false;
   int _doubleTapDirection = 0;
+  Timer? _doubleTapTimer;
+  Offset _doubleTapValue = Offset.zero;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
   Offset? _stickTouchDown;
@@ -1024,6 +1027,8 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _resetDoubleTap() {
+    _doubleTapTimer?.cancel();
+    _doubleTapTimer = null;
     _doubleTapDirection = 0;
   }
 
@@ -1032,12 +1037,17 @@ class _ControlButtonState extends State<_ControlButton>
         ? 0
         : (value.dx < 0 ? -1 : 1);
     final changed = direction != _doubleTapDirection;
+    if (changed) _resetDoubleTap();
     _doubleTapDirection = direction;
-    _setStickValue(value);
+    _doubleTapValue = value;
+    _setStickValue(_doubleTapTimer != null ? Offset(0, value.dy) : value);
     if (!changed || direction == 0) return;
-    // 连续发送松开、按下，不延时；上下分量及消费端引用计数保持不变。
+    // 左右键松开50ms后再次按住，上下分量及消费端引用计数保持不变。
     _setStickValue(Offset(0, value.dy));
-    _setStickValue(value);
+    _doubleTapTimer = Timer(const Duration(milliseconds: 50), () {
+      _doubleTapTimer = null;
+      _setStickValue(_doubleTapValue);
+    });
   }
 
   void _emitStickButtonTap(OnscreenGamepadControl control) {
