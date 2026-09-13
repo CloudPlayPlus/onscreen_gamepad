@@ -27,6 +27,64 @@ void main() {
   List<Offset> values(List<OnscreenGamepadEvent> events) =>
       events.where((e) => e.value != null).map((e) => e.value!).toList();
 
+  for (final feedback in [false, true]) {
+    for (final delta in [const Offset(160, 0), const Offset(160, -160)]) {
+      testWidgets(
+        'half circle stays visible and directed during double tap $feedback/$delta',
+        (tester) async {
+          final events = <OnscreenGamepadEvent>[];
+          final profile = kOnscreenGamepadXboxProfile.copyWith(
+            controls: [
+              left.copyWith(
+                positionFeedback: feedback,
+                stickCenterMode: OnscreenGamepadStickCenterMode.fixed,
+              ),
+            ],
+          );
+          final origin = const OnscreenGamepadLayoutEngine()
+              .layout(renderSize: const Size(800, 600), profile: profile)
+              .controls
+              .single
+              .center;
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: OnscreenGamepadOverlay(
+                profile: profile,
+                onEvent: events.add,
+              ),
+            ),
+          );
+          final pointer = await tester.startGesture(origin);
+          await pointer.moveBy(delta / 8);
+          await pointer.moveTo(
+            origin + delta,
+            timeStamp: const Duration(milliseconds: 250),
+          );
+          final half = find.byKey(
+            ValueKey(
+              feedback
+                  ? 'left-stick-position-feedback'
+                  : 'left-stick-semicircle',
+            ),
+          );
+          for (var phase = 0; phase <= 3; phase++) {
+            await tester.pump(Duration(milliseconds: phase == 0 ? 0 : 50));
+            expect(half, findsOneWidget);
+            final painter =
+                tester.widget<CustomPaint>(half).painter!
+                    as OnscreenGamepadSemicirclePainter;
+            expect(painter.direction, closeTo(delta.direction, .0001));
+            if (phase == 0 || phase == 2) expect(values(events).last.dx, 0);
+          }
+          await pointer.up();
+          await tester.pump();
+          expect(half, findsNothing);
+        },
+      );
+    }
+  }
+
   testWidgets(
     'all four diagonals use the same radial threshold as horizontal',
     (tester) async {
@@ -68,17 +126,17 @@ void main() {
           final events = <OnscreenGamepadEvent>[];
           await mount(tester, events);
           final pointer = await tester.startGesture(const Offset(260, 420));
-          await pointer.moveBy(Offset(x * 90, y * 110));
+          await pointer.moveBy(Offset(x * 70, y * 130));
           expect(values(events).where((v) => v.dx == 0), isEmpty);
           events.clear();
           await pointer.moveTo(
-            const Offset(260, 420) + Offset(x * 110, y * 110),
+            const Offset(260, 420) + Offset(x * 80, y * 80 * math.sqrt(3)),
           );
           expect(values(events).where((v) => v.dx == 0), hasLength(1));
           await tester.pump(const Duration(milliseconds: 50));
           events.clear();
           await pointer.moveTo(
-            const Offset(260, 420) + Offset(x * 90, y * 110),
+            const Offset(260, 420) + Offset(x * 70, y * 130),
           );
           expect(values(events).where((v) => v.dx == 0), isEmpty);
           await pointer.up();

@@ -466,11 +466,18 @@ class _ControlButtonState extends State<_ControlButton>
     }
   }
 
+  // 输入脉冲不能改变手指的视觉反馈。
+  Offset get _visualStickValue =>
+      widget.placed.control.doubleTapSprintEnabled && _activePointer != null
+      ? _doubleTapValue
+      : _stickValue;
+
   bool get _showRunTarget =>
       widget.placed.control.autoRunEnabled &&
       _activePointer != null &&
-      _stickValue.dy < 0 &&
-      _stickValue.dx.abs() <= -_stickValue.dy * math.tan(math.pi / 6);
+      _visualStickValue.dy < 0 &&
+      _visualStickValue.dx.abs() <=
+          -_visualStickValue.dy * math.tan(math.pi / 6);
 
   Offset get _runTarget {
     final center = widget.placed.control.positionFeedbackEnabled
@@ -490,7 +497,7 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   bool get _runTargetReached {
-    if (!_showRunTarget || _stickValue.distance < .99) return false;
+    if (!_showRunTarget || _visualStickValue.distance < .99) return false;
     final touch = widget.placed.control.positionFeedbackEnabled
         ? widget.feedbackCenter + _lastPointerPosition! - _stickOrigin!
         : _lastPointerPosition!;
@@ -534,7 +541,7 @@ class _ControlButtonState extends State<_ControlButton>
               _activePointer != null) ...[
             if (!control.positionFeedbackEnabled &&
                 _stickOrigin != null &&
-                _stickValue != Offset.zero)
+                _visualStickValue != Offset.zero)
               Positioned.fromRect(
                 rect: Rect.fromCenter(
                   center: _stickOrigin!,
@@ -545,7 +552,7 @@ class _ControlButtonState extends State<_ControlButton>
                   child: CustomPaint(
                     key: ValueKey('${control.id}-semicircle'),
                     painter: OnscreenGamepadSemicirclePainter(
-                      direction: _stickValue.direction,
+                      direction: _visualStickValue.direction,
                       color: _withOpacity(
                         Colors.white,
                         widget.profile.semicircleOpacity,
@@ -557,7 +564,7 @@ class _ControlButtonState extends State<_ControlButton>
             if (control.positionFeedbackEnabled &&
                 _stickOrigin != null &&
                 _lastPointerPosition != null &&
-                _stickValue != Offset.zero) ...[
+                _visualStickValue != Offset.zero) ...[
               Positioned.fromRect(
                 rect: Rect.fromCenter(
                   center: widget.feedbackCenter,
@@ -568,7 +575,7 @@ class _ControlButtonState extends State<_ControlButton>
                   child: CustomPaint(
                     key: ValueKey('${control.id}-position-feedback'),
                     painter: OnscreenGamepadSemicirclePainter(
-                      direction: _stickValue.direction,
+                      direction: _visualStickValue.direction,
                       color: _withOpacity(
                         Colors.white,
                         widget.profile.semicircleOpacity,
@@ -623,7 +630,7 @@ class _ControlButtonState extends State<_ControlButton>
                 foreground: foreground,
                 size: widget.placed.visualSize,
                 isActive: isActive,
-                stickValue: _stickValue,
+                stickValue: _visualStickValue,
               ),
             ),
           if (_showRunTarget)
@@ -1025,7 +1032,8 @@ class _ControlButtonState extends State<_ControlButton>
     }
     if (widget.placed.control.doubleTapSprintEnabled) {
       // 四个斜向都按半径判断距离，角度仅决定是否进入左右奔跑扇区。
-      final inHorizontalSector = delta.dx.abs() >= delta.dy.abs();
+      final inHorizontalSector =
+          delta.dx.abs() * math.sqrt(3) + 1e-9 >= delta.dy.abs();
       _updateDoubleTap(
         value,
         atSprintThreshold && inHorizontalSector,
