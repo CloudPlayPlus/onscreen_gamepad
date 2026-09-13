@@ -1042,7 +1042,11 @@ class _ControlButtonState extends State<_ControlButton>
   void _emitSprint(_ControlButton source, bool down) {
     source.onEvent?.call(
       OnscreenGamepadEvent(
-        type: OnscreenGamepadEventType.keyboardKey,
+        type:
+            source.placed.control.sprintKey.kind ==
+                OnscreenGamepadInputKind.gamepadButton
+            ? OnscreenGamepadEventType.gamepadButton
+            : OnscreenGamepadEventType.keyboardKey,
         phase: down
             ? OnscreenGamepadEventPhase.down
             : OnscreenGamepadEventPhase.up,

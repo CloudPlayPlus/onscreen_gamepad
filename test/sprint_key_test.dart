@@ -47,6 +47,50 @@ void main() {
     );
   });
 
+  for (final code in ['leftStick', 'rightTrigger']) {
+    testWidgets('gamepad sprint $code presses and releases at threshold', (
+      tester,
+    ) async {
+      final events = <OnscreenGamepadEvent>[];
+      final control = OnscreenGamepadControl.fromJson(
+        left
+            .copyWith(
+              sprintEnabled: true,
+              autoRun: false,
+              sprintKey: OnscreenGamepadInput.gamepadButton(code),
+            )
+            .toJson(),
+      );
+      expect(control.sprintKeyEnabled, isTrue);
+      await mount(tester, control, events);
+      const origin = Offset(260, 420);
+      final pointer = await tester.startGesture(origin);
+      await pointer.moveBy(const Offset(160, 0));
+      final press = events
+          .where(
+            (e) =>
+                e.input.kind == OnscreenGamepadInputKind.gamepadButton &&
+                e.input.code == code,
+          )
+          .single;
+      expect(press.type, OnscreenGamepadEventType.gamepadButton);
+      expect(press.isDown, isTrue);
+      await pointer.moveTo(origin);
+      expect(
+        events
+            .where(
+              (e) =>
+                  e.input.kind == OnscreenGamepadInputKind.gamepadButton &&
+                  e.input.code == code,
+            )
+            .last
+            .isUp,
+        isTrue,
+      );
+      await pointer.cancel();
+    });
+  }
+
   testWidgets('raw distance triggers once, retreat releases, auto run holds', (
     tester,
   ) async {

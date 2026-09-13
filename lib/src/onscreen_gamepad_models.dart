@@ -313,7 +313,8 @@ class OnscreenGamepadControl {
   bool get sprintKeyEnabled =>
       isMovementStick &&
       sprintEnabled &&
-      sprintKey.kind == OnscreenGamepadInputKind.keyboardKey;
+      (sprintKey.kind == OnscreenGamepadInputKind.keyboardKey ||
+          sprintKey.kind == OnscreenGamepadInputKind.gamepadButton);
 
   bool get isRightStick =>
       kind == OnscreenGamepadControlKind.stick &&
