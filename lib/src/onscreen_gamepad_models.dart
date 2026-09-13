@@ -261,7 +261,7 @@ class OnscreenGamepadControl {
     this.autoRun = true,
     this.sprintEnabled = false,
     this.sprintKey = const OnscreenGamepadInput.keyboardKey('ShiftLeft'),
-    this.sprintThreshold = .85,
+    this.sprintThreshold = .70,
     this.sizeScale = 1,
     this.color,
     this.sortOrder = 0,
@@ -309,7 +309,7 @@ class OnscreenGamepadControl {
   /// 相对自动奔跑最短触发行程的比例。
   final double sprintThreshold;
   double get effectiveSprintThreshold =>
-      sprintThreshold.isFinite ? sprintThreshold.clamp(.1, 1) : .85;
+      sprintThreshold.isFinite ? sprintThreshold.clamp(.1, 1) : .70;
   bool get sprintKeyEnabled =>
       isMovementStick &&
       sprintEnabled &&
@@ -434,7 +434,7 @@ class OnscreenGamepadControl {
           sprintKey.numericCode != null ||
           sprintKey.kind != OnscreenGamepadInputKind.keyboardKey)
         'sk': sprintKey.toJson(),
-      if (sprintThreshold != .85) 'st': effectiveSprintThreshold,
+      if (sprintThreshold != .70) 'st': effectiveSprintThreshold,
       if (stickCenterMode != OnscreenGamepadStickCenterMode.touchDown)
         'cm': stickCenterMode.name,
       if (positionFeedbackLocation != null)
@@ -508,7 +508,7 @@ class OnscreenGamepadControl {
               Map<String, Object?>.from(json['sk'] as Map),
             )
           : const OnscreenGamepadInput.keyboardKey('ShiftLeft'),
-      sprintThreshold: _double(json['st'], .85),
+      sprintThreshold: _double(json['st'], .70),
       stickCenterMode: _enumByName(
         OnscreenGamepadStickCenterMode.values,
         json['cm'],

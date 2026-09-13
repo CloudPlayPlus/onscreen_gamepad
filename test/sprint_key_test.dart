@@ -28,7 +28,7 @@ void main() {
   test('sprint preferences survive serialization and copying', () {
     expect(left.sprintEnabled, isFalse);
     expect(left.sprintKey.code, 'ShiftLeft');
-    expect(left.effectiveSprintThreshold, .85);
+    expect(left.effectiveSprintThreshold, .70);
     final restored = OnscreenGamepadControl.fromJson(
       left
           .copyWith(
@@ -43,7 +43,7 @@ void main() {
     expect(restored.effectiveSprintThreshold, .7);
     expect(
       left.copyWith(sprintThreshold: double.nan).effectiveSprintThreshold,
-      .85,
+      .70,
     );
   });
 
@@ -104,13 +104,13 @@ void main() {
       find.byKey(const ValueKey('left-stick-run-target')),
     );
     final minimum = (target - origin).distance - 30;
-    await pointer.moveTo(origin + Offset(0, -minimum * .8));
+    await pointer.moveTo(origin + Offset(0, -minimum * .65));
     expect(keys(events), isEmpty);
-    await pointer.moveTo(origin + Offset(0, -minimum * .9));
+    await pointer.moveTo(origin + Offset(0, -minimum * .75));
     expect(keys(events), [OnscreenGamepadEventPhase.down]);
-    await pointer.moveTo(origin + Offset(0, -minimum * .95));
+    await pointer.moveTo(origin + Offset(0, -minimum * .755));
     expect(keys(events).length, 1);
-    await pointer.moveTo(origin + Offset(0, -minimum * .8));
+    await pointer.moveTo(origin + Offset(0, -minimum * .65));
     expect(keys(events).last, OnscreenGamepadEventPhase.up);
     await pointer.moveTo(target);
     await pointer.up();
