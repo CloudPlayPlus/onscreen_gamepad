@@ -27,6 +27,38 @@ void main() {
   List<Offset> values(List<OnscreenGamepadEvent> events) =>
       events.where((e) => e.value != null).map((e) => e.value!).toList();
 
+  testWidgets('double tap mode still latches auto run on target release', (
+    tester,
+  ) async {
+    final events = <OnscreenGamepadEvent>[];
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: OnscreenGamepadOverlay(
+          profile: kOnscreenGamepadXboxProfile.copyWith(
+            controls: [left.copyWith(autoRun: true)],
+          ),
+          onEvent: events.add,
+        ),
+      ),
+    );
+    final pointer = await tester.startGesture(const Offset(260, 420));
+    await pointer.moveBy(const Offset(0, -45));
+    await tester.pump();
+    await pointer.moveTo(
+      tester.getCenter(find.byKey(const ValueKey('left-stick-run-target'))),
+    );
+    await pointer.up();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('left-stick-running')), findsOneWidget);
+    expect(values(events).last, const Offset(0, -1));
+    final stop = await tester.startGesture(const Offset(260, 420));
+    await stop.cancel();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('left-stick-running')), findsNothing);
+    expect(values(events).last, Offset.zero);
+  });
+
   for (final feedback in [false, true]) {
     for (final delta in [const Offset(160, 0), const Offset(160, -160)]) {
       testWidgets(

@@ -932,9 +932,10 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _releasePointer({bool allowStickTap = true}) {
+    final startAutoRun = allowStickTap && _runTargetReached;
     _resetDoubleTap();
     final control = widget.placed.control;
-    if (allowStickTap && _runTargetReached) {
+    if (startAutoRun) {
       setState(() {
         _autoRunning = true;
         _activePointer = null;
