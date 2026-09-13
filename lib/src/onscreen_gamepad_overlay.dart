@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
@@ -281,6 +282,10 @@ class _ControlButtonState extends State<_ControlButton>
   Offset _buttonDragValue = Offset.zero;
   bool _autoRunning = false;
   bool _sprintDown = false;
+  Timer? _doubleTapTimer;
+  int _doubleTapDirection = 0;
+  bool _doubleTapGap = false;
+  Offset _doubleTapValue = Offset.zero;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
   Offset? _stickTouchDown;
@@ -355,6 +360,14 @@ class _ControlButtonState extends State<_ControlButton>
         oldWidget.placed.control.autoRun != widget.placed.control.autoRun ||
         oldWidget.placed.control.sprintEnabled !=
             widget.placed.control.sprintEnabled ||
+        oldWidget.placed.control.sprintDoubleTap !=
+            widget.placed.control.sprintDoubleTap ||
+        oldWidget.placed.control.effectiveSprintTapIntervalMs !=
+            widget.placed.control.effectiveSprintTapIntervalMs ||
+        !const DeepCollectionEquality().equals(
+          oldWidget.placed.control.behaviorConfig,
+          widget.placed.control.behaviorConfig,
+        ) ||
         oldWidget.placed.control.effectiveSprintThreshold !=
             widget.placed.control.effectiveSprintThreshold ||
         !const DeepCollectionEquality().equals(
@@ -373,6 +386,7 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _cancelInput(_ControlButton source, {bool afterFrame = false}) {
+    _resetDoubleTap();
     final control = source.placed.control;
     _releaseSlideTargets(afterFrame: afterFrame);
     final sprintDown = _sprintDown;
@@ -910,6 +924,7 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _releasePointer({bool allowStickTap = true}) {
+    _resetDoubleTap();
     final control = widget.placed.control;
     if (allowStickTap && _runTargetReached) {
       setState(() {
@@ -990,7 +1005,9 @@ class _ControlButtonState extends State<_ControlButton>
         ((distance - _kStickDeadZone) / (_kStickTravel - _kStickDeadZone))
             .clamp(0.0, 1.0);
     final value = distance == 0 ? Offset.zero : delta / distance * force;
-    if (widget.placed.control.sprintKeyEnabled) {
+    var atSprintThreshold = false;
+    if (widget.placed.control.sprintKeyEnabled ||
+        widget.placed.control.doubleTapSprintEnabled) {
       final targetOrigin = widget.placed.control.positionFeedbackEnabled
           ? widget.feedbackCenter
           : origin;
@@ -998,12 +1015,50 @@ class _ControlButtonState extends State<_ControlButton>
         _kStickTravel,
         (_runTarget - targetOrigin).distance - 30,
       );
+      atSprintThreshold =
+          distance >=
+          runDistance * widget.placed.control.effectiveSprintThreshold;
       _setSprintDown(
-        distance >=
-            runDistance * widget.placed.control.effectiveSprintThreshold,
+        widget.placed.control.sprintKeyEnabled && atSprintThreshold,
       );
     }
-    _setStickValue(value);
+    if (widget.placed.control.doubleTapSprintEnabled) {
+      _updateDoubleTap(value, atSprintThreshold);
+    } else {
+      _setStickValue(value);
+    }
+  }
+
+  void _resetDoubleTap() {
+    _doubleTapTimer?.cancel();
+    _doubleTapTimer = null;
+    _doubleTapDirection = 0;
+    _doubleTapGap = false;
+  }
+
+  void _updateDoubleTap(Offset value, bool atThreshold) {
+    final direction = !atThreshold || value.dx.abs() <= .35
+        ? 0
+        : (value.dx < 0 ? -1 : 1);
+    final changed = direction != _doubleTapDirection;
+    if (changed) _resetDoubleTap();
+    _doubleTapValue = value;
+    _setStickValue(_doubleTapGap ? Offset(0, value.dy) : value);
+    if (!changed || direction == 0) return;
+    _doubleTapDirection = direction;
+    final interval = Duration(
+      milliseconds: widget.placed.control.effectiveSprintTapIntervalMs,
+    );
+    // 通过原有方向向量通路输出双击，保留上下键及消费端持键引用计数。
+    _doubleTapTimer = Timer(interval, () {
+      _doubleTapGap = true;
+      _setStickValue(Offset(0, _doubleTapValue.dy));
+      _doubleTapTimer = Timer(interval, () {
+        _doubleTapGap = false;
+        _doubleTapTimer = null;
+        _setStickValue(_doubleTapValue);
+      });
+    });
   }
 
   void _emitStickButtonTap(OnscreenGamepadControl control) {
