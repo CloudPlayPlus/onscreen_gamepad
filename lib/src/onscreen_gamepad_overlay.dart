@@ -1024,7 +1024,13 @@ class _ControlButtonState extends State<_ControlButton>
       );
     }
     if (widget.placed.control.doubleTapSprintEnabled) {
-      _updateDoubleTap(value, atSprintThreshold, timeStamp);
+      // 四个斜向都按半径判断距离，角度仅决定是否进入左右奔跑扇区。
+      final inHorizontalSector = delta.dx.abs() >= delta.dy.abs();
+      _updateDoubleTap(
+        value,
+        atSprintThreshold && inHorizontalSector,
+        timeStamp,
+      );
     } else {
       _setStickValue(value);
     }

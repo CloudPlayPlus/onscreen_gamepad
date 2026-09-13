@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onscreen_gamepad/onscreen_gamepad.dart';
@@ -24,6 +26,66 @@ void main() {
       );
   List<Offset> values(List<OnscreenGamepadEvent> events) =>
       events.where((e) => e.value != null).map((e) => e.value!).toList();
+
+  testWidgets(
+    'all four diagonals use the same radial threshold as horizontal',
+    (tester) async {
+      final events = <OnscreenGamepadEvent>[];
+      await mount(tester, events);
+      Future<int> triggerRadius(Offset unit) async {
+        final pointer = await tester.startGesture(const Offset(260, 420));
+        for (var radius = 20; radius <= 160; radius++) {
+          events.clear();
+          await pointer.moveTo(
+            const Offset(260, 420) + unit * radius.toDouble(),
+          );
+          if (values(events).any((v) => v.dx == 0)) {
+            await pointer.up();
+            return radius;
+          }
+        }
+        await pointer.up();
+        fail('No sprint trigger for $unit');
+      }
+
+      final horizontal = await triggerRadius(const Offset(1, 0));
+      for (final x in [-1.0, 1.0]) {
+        for (final y in [-1.0, 1.0]) {
+          expect(
+            await triggerRadius(Offset(x, y) / math.sqrt(2)),
+            closeTo(horizontal, 1),
+          );
+        }
+      }
+    },
+  );
+
+  for (final x in [-1.0, 1.0]) {
+    for (final y in [-1.0, 1.0]) {
+      testWidgets(
+        'angle gate $x/$y requires horizontal sector and preserves running',
+        (tester) async {
+          final events = <OnscreenGamepadEvent>[];
+          await mount(tester, events);
+          final pointer = await tester.startGesture(const Offset(260, 420));
+          await pointer.moveBy(Offset(x * 90, y * 110));
+          expect(values(events).where((v) => v.dx == 0), isEmpty);
+          events.clear();
+          await pointer.moveTo(
+            const Offset(260, 420) + Offset(x * 110, y * 110),
+          );
+          expect(values(events).where((v) => v.dx == 0), hasLength(1));
+          await tester.pump(const Duration(milliseconds: 50));
+          events.clear();
+          await pointer.moveTo(
+            const Offset(260, 420) + Offset(x * 90, y * 110),
+          );
+          expect(values(events).where((v) => v.dx == 0), isEmpty);
+          await pointer.up();
+        },
+      );
+    }
+  }
 
   test(
     'double tap preference serializes and only enables keyboard movement',
