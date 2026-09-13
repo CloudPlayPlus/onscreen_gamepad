@@ -277,6 +277,8 @@ class _ControlButtonState extends State<_ControlButton>
   int? _activePointer;
   int? _cameraButtonPointer;
   Offset? _lastCameraButtonPosition;
+  Offset? _buttonDragOrigin;
+  Offset _buttonDragValue = Offset.zero;
   bool _autoRunning = false;
   Offset _stickValue = Offset.zero;
   Offset? _stickOrigin;
@@ -347,6 +349,8 @@ class _ControlButtonState extends State<_ControlButton>
         oldWidget.placed.control.mouseSensitivity !=
             widget.placed.control.mouseSensitivity ||
         oldWidget.placed.control.mouseDrag != widget.placed.control.mouseDrag ||
+        oldWidget.placed.control.dragOutput !=
+            widget.placed.control.dragOutput ||
         oldWidget.placed.control.autoRun != widget.placed.control.autoRun ||
         oldWidget.placed.control.stickCenterMode !=
             widget.placed.control.stickCenterMode ||
@@ -371,6 +375,9 @@ class _ControlButtonState extends State<_ControlButton>
             _ => _activePointer != null || _autoRunning,
           };
     final wasMoving = _stickValue != Offset.zero;
+    final wasButtonDragging = _buttonDragValue != Offset.zero;
+    _buttonDragValue = Offset.zero;
+    _buttonDragOrigin = null;
     final pendingStickButtonUps = _pendingStickButtonUps.toList();
     // 先清除本地手势，旧命中路径后续的 move/up 不得再次输出。
     _activePointer = null;
@@ -389,11 +396,16 @@ class _ControlButtonState extends State<_ControlButton>
     _buttonLocked = false;
     _buttonDownTime = null;
     _unlockGesture = false;
-    if (!active && !wasMoving && !buttonDown && pendingStickButtonUps.isEmpty) {
+    if (!active &&
+        !wasMoving &&
+        !wasButtonDragging &&
+        !buttonDown &&
+        pendingStickButtonUps.isEmpty) {
       return;
     }
 
     void release() {
+      if (wasButtonDragging) _emitButtonDragStick(source, Offset.zero);
       if (buttonDown) {
         _emitButtonPhase(source, OnscreenGamepadEventPhase.up);
       }
@@ -629,6 +641,7 @@ class _ControlButtonState extends State<_ControlButton>
         if (_cameraButtonPointer != null) return;
         setState(() => _cameraButtonPointer = event.pointer);
         _lastCameraButtonPosition = event.localPosition;
+        _buttonDragOrigin = event.localPosition;
         _pressButton(event.timeStamp);
       } else if (_activePointer == null) {
         _activePointer = event.pointer;
@@ -647,6 +660,7 @@ class _ControlButtonState extends State<_ControlButton>
     });
     final control = widget.placed.control;
     if (control.supportsButtonPressMode) {
+      _buttonDragOrigin = event.localPosition;
       _pressButton(event.timeStamp);
       return;
     }
@@ -669,7 +683,7 @@ class _ControlButtonState extends State<_ControlButton>
     if (event.pointer == _cameraButtonPointer) {
       _trackSlideTargets(event.position);
       if (widget.placed.control.mouseDrag) {
-        _emitMouseDragMove(event.localPosition, _lastCameraButtonPosition);
+        _emitButtonDragMove(event.localPosition, _lastCameraButtonPosition);
         _lastCameraButtonPosition = event.localPosition;
       }
       return;
@@ -679,9 +693,13 @@ class _ControlButtonState extends State<_ControlButton>
     }
     final control = widget.placed.control;
     if (!control.isCameraStick) _trackSlideTargets(event.position);
-    if (control.isCameraStick ||
-        (control.supportsButtonPressMode && control.mouseDrag)) {
+    if (control.isCameraStick) {
       _emitMouseDragMove(event.localPosition, _lastPointerPosition);
+      _lastPointerPosition = event.localPosition;
+      return;
+    }
+    if (control.supportsButtonPressMode && control.mouseDrag) {
+      _emitButtonDragMove(event.localPosition, _lastPointerPosition);
       _lastPointerPosition = event.localPosition;
       return;
     }
@@ -824,6 +842,11 @@ class _ControlButtonState extends State<_ControlButton>
   }
 
   void _releaseButton(Duration timeStamp, {bool canceled = false}) {
+    _buttonDragOrigin = null;
+    if (_buttonDragValue != Offset.zero) {
+      _buttonDragValue = Offset.zero;
+      _emitButtonDragStick(widget, Offset.zero);
+    }
     _releaseSlideTargets();
     final mode = widget.placed.control.buttonPressMode;
     if (canceled) {
@@ -1063,6 +1086,38 @@ class _ControlButtonState extends State<_ControlButton>
         OnscreenGamepadEvent.mouseMove(control: control, delta: delta),
       );
     }
+  }
+
+  void _emitButtonDragMove(Offset position, Offset? lastPosition) {
+    if (widget.placed.control.dragOutput == OnscreenGamepadDragOutput.mouse) {
+      _emitMouseDragMove(position, lastPosition);
+      return;
+    }
+    final origin = _buttonDragOrigin;
+    if (origin == null) return;
+    var value = (position - origin) / 50;
+    if (value.distance > 1) value /= value.distance;
+    if (value == _buttonDragValue) return;
+    _buttonDragValue = value;
+    _emitButtonDragStick(widget, value);
+  }
+
+  void _emitButtonDragStick(_ControlButton source, Offset value) {
+    final left =
+        source.placed.control.dragOutput == OnscreenGamepadDragOutput.leftStick;
+    source.onEvent?.call(
+      OnscreenGamepadEvent(
+        type: OnscreenGamepadEventType.gamepadStick,
+        phase: OnscreenGamepadEventPhase.change,
+        control: source.placed.control,
+        input: OnscreenGamepadInput.gamepadStick(
+          code: left ? 'leftStick' : 'rightStick',
+          xAxis: left ? 'leftX' : 'rightX',
+          yAxis: left ? 'leftY' : 'rightY',
+        ),
+        value: value,
+      ),
+    );
   }
 
   void _emitFpsFireMove(Offset localPosition) {
