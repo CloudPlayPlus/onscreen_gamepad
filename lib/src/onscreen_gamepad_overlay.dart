@@ -84,10 +84,10 @@ class _OnscreenGamepadOverlayState extends State<OnscreenGamepadOverlay> {
 
         final orderedControls = [
           ...result.controls.where(
-            (p) => p.control.isMovementStick || p.control.isCameraStick,
+            (p) => p.control.isMovementStick || p.control.isRightStick,
           ),
           ...result.controls.where(
-            (p) => !p.control.isMovementStick && !p.control.isCameraStick,
+            (p) => !p.control.isMovementStick && !p.control.isRightStick,
           ),
         ];
         return Stack(

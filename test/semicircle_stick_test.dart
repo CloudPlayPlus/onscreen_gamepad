@@ -248,6 +248,64 @@ void main() {
   );
 
   testWidgets(
+    'ordinary right half supports R3 taps and analog drags with button priority',
+    (tester) async {
+      final events = <OnscreenGamepadEvent>[];
+      final selected = profile.copyWith(
+        controls: [
+          rightStick.copyWith(regionTrigger: true, autoRun: false),
+          button.copyWith(anchor: OnscreenGamepadAnchor.bottomRight),
+        ],
+      );
+      await mount(tester, events, customProfile: selected);
+      const point = Offset(650, 100);
+      final rightCenter = const OnscreenGamepadLayoutEngine()
+          .layout(renderSize: const Size(800, 600), profile: selected)
+          .controls
+          .firstWhere((c) => c.control.id == rightStick.id)
+          .center;
+      await tester.tapAt(rightCenter);
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(
+        events
+            .where((e) => e.type == OnscreenGamepadEventType.gamepadButton)
+            .map((e) => e.input.code),
+        ['rightStickButton', 'rightStickButton'],
+      );
+      events.clear();
+      final drag = await tester.startGesture(point);
+      await drag.moveBy(const Offset(40, 0));
+      expect(events.last.value, const Offset(1, 0));
+      await drag.up();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(
+        events.where((e) => e.type == OnscreenGamepadEventType.gamepadButton),
+        isEmpty,
+      );
+      expect(events.where((e) => e.delta != null), isEmpty);
+      expect(events.where((e) => e.value != null).last.value, Offset.zero);
+      events.clear();
+      final placed = const OnscreenGamepadLayoutEngine()
+          .layout(renderSize: const Size(800, 600), profile: selected)
+          .controls
+          .firstWhere((c) => c.control.id == button.id);
+      await tester.tapAt(placed.center);
+      expect(events.every((e) => e.control.id == button.id), isTrue);
+      expect(events, isNotEmpty);
+      events.clear();
+      await mount(
+        tester,
+        events,
+        customProfile: selected.copyWith(
+          controls: [rightStick.copyWith(regionTrigger: false)],
+        ),
+      );
+      await tester.tapAt(point);
+      expect(events, isEmpty);
+    },
+  );
+
+  testWidgets(
     'movement stick hit boxes beat peer regions and retain their pointers',
     (tester) async {
       for (final firstExpanded in [true, false]) {
@@ -491,7 +549,14 @@ void main() {
             ],
           ),
         );
-        final origin = tester.getCenter(find.byKey(ValueKey(rightStick.id)));
+        final origin = const OnscreenGamepadLayoutEngine()
+            .layout(
+              renderSize: const Size(800, 600),
+              profile: profile.copyWith(controls: [rightStick]),
+            )
+            .controls
+            .single
+            .center;
         final pointer = await tester.startGesture(origin);
         await pointer.moveBy(const Offset(20.5, 0));
         await tester.pump();

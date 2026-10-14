@@ -1907,28 +1907,19 @@ void _paintButtonSymbol(
     case OnscreenGamepadButtonIcon.dpad:
       canvas.drawPath(
         Path()
-          ..moveTo(8, 3)
-          ..lineTo(16, 3)
-          ..lineTo(16, 8)
-          ..lineTo(21, 8)
-          ..lineTo(21, 16)
-          ..lineTo(16, 16)
-          ..lineTo(16, 21)
-          ..lineTo(8, 21)
-          ..lineTo(8, 16)
-          ..lineTo(3, 16)
-          ..lineTo(3, 8)
-          ..lineTo(8, 8)
-          ..lineTo(8, 3)
-          ..close()
-          ..moveTo(10, 6)
-          ..lineTo(14, 6)
-          ..moveTo(10, 18)
-          ..lineTo(14, 18)
-          ..moveTo(6, 10)
-          ..lineTo(6, 14)
-          ..moveTo(18, 10)
-          ..lineTo(18, 14),
+          ..moveTo(9, 3)
+          ..lineTo(15, 3)
+          ..lineTo(15, 9)
+          ..lineTo(21, 9)
+          ..lineTo(21, 15)
+          ..lineTo(15, 15)
+          ..lineTo(15, 21)
+          ..lineTo(9, 21)
+          ..lineTo(9, 15)
+          ..lineTo(3, 15)
+          ..lineTo(3, 9)
+          ..lineTo(9, 9)
+          ..close(),
         stroke,
       );
       break;
