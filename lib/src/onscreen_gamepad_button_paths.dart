@@ -1154,56 +1154,28 @@ void _paintButtonSymbol(
     case OnscreenGamepadButtonIcon.pickup:
       canvas.drawPath(
         Path()
-          ..moveTo(5, 13)
-          ..lineTo(5, 8)
-          ..arcToPoint(
-            const Offset(9, 8),
-            radius: const Radius.elliptical(2, 2),
-            rotation: 0,
-            largeArc: false,
-            clockwise: true,
-          )
-          ..lineTo(9, 12)
-          ..moveTo(9, 10)
-          ..lineTo(9, 5)
-          ..arcToPoint(
-            const Offset(13, 5),
-            radius: const Radius.elliptical(2, 2),
-            rotation: 0,
-            largeArc: false,
-            clockwise: true,
-          )
-          ..lineTo(13, 12)
-          ..moveTo(13, 9)
-          ..arcToPoint(
-            const Offset(17, 9),
-            radius: const Radius.elliptical(2, 2),
-            rotation: 0,
-            largeArc: false,
-            clockwise: true,
-          )
-          ..lineTo(17, 13)
-          ..moveTo(17, 11)
-          ..arcToPoint(
-            const Offset(21, 11),
-            radius: const Radius.elliptical(2, 2),
-            rotation: 0,
-            largeArc: false,
-            clockwise: true,
-          )
-          ..lineTo(21, 16)
-          ..lineTo(17, 21)
-          ..lineTo(9, 21)
-          ..lineTo(3, 15)
-          ..arcToPoint(
-            const Offset(5, 12),
-            radius: const Radius.elliptical(2, 2),
-            rotation: 0,
-            largeArc: false,
-            clockwise: true,
-          )
-          ..lineTo(9, 15),
-        stroke,
+          ..moveTo(18.992, 17.363)
+          ..cubicTo(16.752, 16.073, 16.344, 14.58, 16.344, 12.815)
+          ..cubicTo(16.277, 10.846, 16.344, 9.556, 15.394, 8.877)
+          ..cubicTo(14.24, 8.131, 13.426, 7.995, 12.068, 6.637)
+          ..cubicTo(11.185, 5.755, 10.642, 5.483, 9.488, 5.415)
+          ..lineTo(6.026, 5.348)
+          ..cubicTo(5.144, 5.28, 4.94, 5.755, 5.415, 6.23)
+          ..cubicTo(5.958, 6.909, 6.909, 6.773, 7.656, 6.705)
+          ..cubicTo(8.47, 7.112, 9.081, 7.316, 9.964, 7.384)
+          ..cubicTo(10.846, 7.588, 11.661, 8.674, 11.932, 9.488)
+          ..cubicTo(12.272, 10.778, 12.136, 12.272, 11.593, 13.086)
+          ..cubicTo(10.982, 13.969, 10.235, 13.901, 9.624, 13.29)
+          ..cubicTo(8.538, 12.339, 8.266, 11.253, 7.791, 10.099)
+          ..cubicTo(7.384, 9.013, 6.569, 8.199, 5.551, 7.995)
+          ..cubicTo(4.669, 7.791, 4.194, 7.995, 4.465, 8.674)
+          ..cubicTo(5.008, 9.624, 5.28, 10.303, 5.483, 11.05)
+          ..cubicTo(5.619, 12, 6.434, 12.407, 7.18, 13.29)
+          ..cubicTo(8.402, 14.783, 9.285, 15.937, 10.846, 16.548)
+          ..cubicTo(13.222, 17.431, 14.58, 18.788, 15.801, 20.553)
+          ..cubicTo(16.005, 20.893, 18.72, 18.042, 18.992, 17.363)
+          ..close(),
+        fill,
       );
       break;
     case OnscreenGamepadButtonIcon.door:
