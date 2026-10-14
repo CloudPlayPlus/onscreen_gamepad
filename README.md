@@ -6,7 +6,7 @@ CloudPlayPlus 屏幕手柄插件。插件负责屏幕按钮的布局、绘制、
 
 - 五区线性布局：`topLeft`、`topRight`、`bottomLeft`、`bottomCenter`、`bottomRight`
 - Xbox 默认 profile：摇杆、D-pad、ABXY、LB/LT/RB/RT、View/Menu/Xbox
-- 移动摇杆默认开启大范围起手，可关闭区域触发以仅在原命中框起手；其他屏幕按钮和其他摇杆原命中框优先，有效范围外不拦截下方视频触摸
+- 普通左右摇杆默认开启所在半屏起手，可关闭区域触发以仅在原命中框起手；其他屏幕按钮和其他摇杆原命中框优先，有效范围外不拦截下方视频触摸
 - 摇杆可选择以落点或原布局摇杆位置为中心；落点模式仅显示原半月，原布局中心模式可切换为固定位置的“半月＋触点”提示（左摇杆和 WASD 默认开启、右摇杆关闭），两种半月互斥显示。支持 down/up 和长度不超过 1 的归一化拖动向量
 - 统一事件模型：gamepad、keyboard、mouse、custom 输入都走 `OnscreenGamepadEvent`
 - profile 支持 compact JSON 往返，便于主仓持久化
@@ -48,7 +48,7 @@ import 'package:onscreen_gamepad/onscreen_gamepad.dart';
 
 ## 最小接入
 
-把 overlay 放在串流视频层上方即可。普通按钮优先命中；移动摇杆默认还接收所在完整半屏的空白区域，设置 `regionTrigger: false` 后仅在原命中框起手。右摇杆可切为 `stickMode: OnscreenGamepadStickMode.camera`，强制半屏鼠标视角转动，本体仅作 R3；`mouseSensitivity` 调整倍率。移动摇杆的 `autoRun` 默认开启，向上推至奔跑提示附近松手锁定，再次触碰解除。所有有效起手范围之外继续落到下层视频。
+把 overlay 放在串流视频层上方即可。普通按钮优先命中；普通左右摇杆默认还接收所在完整半屏的空白区域，轻点摇杆本体分别输出 L3/R3（半屏空白处轻点不触发），设置 `regionTrigger: false` 后仅在原命中框起手。右摇杆可切为 `stickMode: OnscreenGamepadStickMode.camera`，强制半屏鼠标视角转动，本体仅作 R3；`mouseSensitivity` 调整倍率。移动摇杆的 `autoRun` 默认开启，向上推至奔跑提示附近松手锁定，再次触碰解除。所有有效起手范围之外继续落到下层视频。
 
 鼠标倍率默认 10，范围 1–50。视角 R3 使用普通中号圆形按钮基准，所有控件大小倍率下限 25%。普通按键及视角 R3 可用 `buttonPressMode` 选择 `normal`、`toggle`、`longPressToggle` 或 `slideHold`：普通按压、点击锁定、满半秒松手锁定、滑过按钮后一起按住并随抬指释放。长按仅比较事件时间戳；锁定再点释放，失焦/卸载释放全部持有输入。
 

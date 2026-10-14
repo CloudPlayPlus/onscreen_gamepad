@@ -330,7 +330,7 @@ class OnscreenGamepadControl {
   bool get isCameraStick =>
       isRightStick && stickMode == OnscreenGamepadStickMode.camera;
   bool get regionTriggerEnabled =>
-      isCameraStick || (isMovementStick && regionTrigger);
+      isCameraStick || ((isMovementStick || isRightStick) && regionTrigger);
   bool get autoRunEnabled => isMovementStick && !isCameraStick && autoRun;
   double get effectiveMouseSensitivity =>
       mouseSensitivity.isFinite ? mouseSensitivity.clamp(1, 50) : 10;
